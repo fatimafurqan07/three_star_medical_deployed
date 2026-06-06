@@ -1235,19 +1235,32 @@ class VoucherController extends Controller
             $balanceService = app(\App\Services\BalanceService::class);
 
             if ($type == 'vendor') {
-                $apAccount = Account::find($balanceService->getAccountsPayableId());
-                $apTitle = $apAccount ? $apAccount->title : 'Accounts Payable';
+                $apTitle = 'Accounts Payable';
+                try {
+                    $apAccount = Account::find($balanceService->getAccountsPayableId());
+                    if ($apAccount) $apTitle = $apAccount->title;
+                } catch (\Exception $e) {
+                    // AP account not configured yet, use default title
+                }
 
                 $vendors = \Illuminate\Support\Facades\DB::table('vendors')->select('id', 'name as text', 'phone as mobile', 'address', 'opening_balance')->get();
                 foreach ($vendors as $vendor) {
-                    // Use BalanceService to get real-time balance from Journal Entries
-                    $vendor->closing_balance = $balanceService->getVendorBalance($vendor->id);
+                    try {
+                        $vendor->closing_balance = $balanceService->getVendorBalance($vendor->id);
+                    } catch (\Exception $e) {
+                        $vendor->closing_balance = $vendor->opening_balance ?? 0;
+                    }
                     $vendor->text = $vendor->text . ' | ' . $apTitle;
                     $data[] = $vendor;
                 }
             } elseif ($type == 'customer') {
-                $arAccount = Account::find($balanceService->getAccountsReceivableId());
-                $arTitle = $arAccount ? $arAccount->title : 'Accounts Receivable';
+                $arTitle = 'Accounts Receivable';
+                try {
+                    $arAccount = Account::find($balanceService->getAccountsReceivableId());
+                    if ($arAccount) $arTitle = $arAccount->title;
+                } catch (\Exception $e) {
+                    // AR account not configured yet, use default title
+                }
 
                 $customers = \App\Models\Customer::where(function ($query) {
                         $query->where('customer_type', '!=', 'Walking Customer')
@@ -1256,8 +1269,11 @@ class VoucherController extends Controller
                     ->get(['id', 'customer_name', 'mobile', 'address', 'status', 'opening_balance']);
 
                 foreach ($customers as $customer) {
-                    // Use BalanceService to get real-time balance from Journal Entries
-                    $customer->closing_balance = $balanceService->getCustomerBalance($customer->id);
+                    try {
+                        $customer->closing_balance = $balanceService->getCustomerBalance($customer->id);
+                    } catch (\Exception $e) {
+                        $customer->closing_balance = $customer->opening_balance ?? 0;
+                    }
 
                     // Format for Frontend
                     $customer->text = $customer->customer_name . ' | ' . $arTitle;
@@ -1265,15 +1281,23 @@ class VoucherController extends Controller
                     $data[] = $customer;
                 }
             } elseif ($type == 'walkin') {
-                $arAccount = Account::find($balanceService->getAccountsReceivableId());
-                $arTitle = $arAccount ? $arAccount->title : 'Accounts Receivable';
+                $arTitle = 'Accounts Receivable';
+                try {
+                    $arAccount = Account::find($balanceService->getAccountsReceivableId());
+                    if ($arAccount) $arTitle = $arAccount->title;
+                } catch (\Exception $e) {
+                    // AR account not configured yet, use default title
+                }
 
                 $customers = \App\Models\Customer::where('customer_type', 'Walking Customer')
                     ->get(['id', 'customer_name', 'mobile', 'address', 'status', 'opening_balance']);
 
                 foreach ($customers as $customer) {
-                    // Use BalanceService to get real-time balance from Journal Entries
-                    $customer->closing_balance = $balanceService->getCustomerBalance($customer->id);
+                    try {
+                        $customer->closing_balance = $balanceService->getCustomerBalance($customer->id);
+                    } catch (\Exception $e) {
+                        $customer->closing_balance = $customer->opening_balance ?? 0;
+                    }
 
                     // Format for Frontend
                     $customer->text = $customer->customer_name . ' | ' . $arTitle;
