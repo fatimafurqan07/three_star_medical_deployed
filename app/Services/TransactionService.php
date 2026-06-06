@@ -683,7 +683,12 @@ class TransactionService
                 $voucher->delete();
             }
 
-            // 2. Delete Customer Ledger Entries linked directly to the Sale or matching the invoice number
+            // 2. Delete Journal Entries linked directly to the Sale (created by direct posting without Journal Voucher)
+            \App\Models\JournalEntry::where('source_type', \App\Models\Sale::class)
+                ->where('source_id', $sale->id)
+                ->delete();
+
+            // 3. Delete Customer Ledger Entries linked directly to the Sale or matching the invoice number
             \App\Models\CustomerLedger::where('customer_id', $sale->customer_id)
                 ->where(function ($q) use ($sale) {
                     $q->where(function ($q2) use ($sale) {
@@ -695,10 +700,10 @@ class TransactionService
                 })
                 ->delete();
 
-            // 3. Delete Customer Payment records
+            // 4. Delete Customer Payment records
             \App\Models\CustomerPayment::where('sale_id', $sale->id)->delete();
             
-            // 4. Recalculate running balances for legacy customer ledger
+            // 5. Recalculate running balances for legacy customer ledger
             if ($sale->customer_id) {
                 $this->recalculateCustomerLedger($sale->customer_id);
             }

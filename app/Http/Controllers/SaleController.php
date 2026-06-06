@@ -1426,22 +1426,35 @@ class SaleController extends Controller
                     $arAccountId = $balanceService->getAccountsReceivableId($sale->branch_id);
                     $salesAccountId = $balanceService->getSalesRevenueId($sale->branch_id);
                     $date = $sale->created_at->format('Y-m-d');
-
-                    // --- PROFESSIONAL LEDGER POSTING (ENTRY 1: THE INVOICE) ---
-                    // Create a Journal Voucher for the Sale Invoice (Debit AR, Credit Sales)
                     $custForVoucher = $sale->customer_relation ?? \App\Models\Customer::find($sale->customer_id);
 
-                    if ($custForVoucher) {
-                        $balanceService->createSaleVoucher(
-                            $custForVoucher,
+                    // --- LEDGER POSTING (THE INVOICE) ---
+                    // Post directly to journal entries without creating a separate Journal Voucher document.
+                    // In proper ERP, the sale invoice itself is the source document that posts to GL.
+                    if ($custForVoucher && $sale->total_net > 0) {
+                        // Dr Accounts Receivable (Customer owes us money)
+                        $journalService->recordEntry(
+                            $sale,
+                            $arAccountId,
                             $sale->total_net,
-                            $sale->invoice_no,
+                            0,
+                            "Sale Invoice #{$sale->invoice_no}",
                             $date,
-                            $sale->branch_id
+                            $custForVoucher
+                        );
+
+                        // Cr Sales Revenue (Income earned)
+                        $journalService->recordEntry(
+                            $sale,
+                            $salesAccountId,
+                            0,
+                            $sale->total_net,
+                            "Sale Invoice #{$sale->invoice_no}",
+                            $date
                         );
                     }
 
-                    // --- AUTO RECEIPT (ENTRY 2: THE PAYMENT) ---
+                    // --- AUTO RECEIPT (THE PAYMENT) ---
                     $transactionService = app(\App\Services\TransactionService::class);
                     $transactionService->createReceiptFromSale(
                         $sale,
