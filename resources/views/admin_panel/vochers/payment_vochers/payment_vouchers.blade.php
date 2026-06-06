@@ -384,6 +384,9 @@
                                 <select name="header_account_id" class="erp-select" id="payFromAccount">
                                     <option disabled selected>— Select Account —</option>
                                 </select>
+                                <div id="accountBalanceInfo" style="margin-top: 6px; font-size: 0.85rem; font-weight: 700; color: #059e5a; display: none;">
+                                    <i class="bi bi-wallet2"></i> Balance: Rs. <span id="accountBalanceAmount">0.00</span>
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <label class="lbl">Payment Mode</label>
@@ -514,7 +517,7 @@
             <div class="modal-content rounded-3 shadow border-0">
                 <div class="modal-header text-white" style="background: linear-gradient(135deg, #18b870, #059e5a);">
                     <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle-fill"></i> Quick Add Narration</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="quickNarrationForm">
                     @csrf
@@ -530,7 +533,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 p-3 bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn text-white px-4 fw-bold" style="background: linear-gradient(135deg, #18b870, #059e5a);">Save Narration</button>
                     </div>
                 </form>
@@ -554,11 +557,24 @@
             let headId = $(this).val(),
                 $acc = $('#payFromAccount');
             $acc.html('<option disabled selected>Loading...</option>');
+            $('#accountBalanceInfo').slideUp();
             if (headId) {
                 $.get('{{ url('get-accounts-by-head') }}/' + headId, function(data) {
                     $acc.empty().append('<option disabled selected>— Select Account —</option>');
-                    data.forEach(acc => $acc.append(`<option value="${acc.id}">${acc.title}</option>`));
+                    data.forEach(acc => $acc.append(`<option value="${acc.id}" data-balance="${acc.opening_balance}">${acc.title}</option>`));
                 });
+            } else {
+                $acc.empty().append('<option disabled selected>— Select Account —</option>');
+            }
+        });
+
+        $('#payFromAccount').on('change', function() {
+            let balance = $(this).find(':selected').data('balance');
+            if (balance !== undefined && balance !== null) {
+                $('#accountBalanceAmount').text(parseFloat(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $('#accountBalanceInfo').slideDown();
+            } else {
+                $('#accountBalanceInfo').slideUp();
             }
         });
         $(document).on('change', '.rowType', function() {

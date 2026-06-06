@@ -767,6 +767,9 @@ class VoucherController extends Controller
                 } elseif ($firstType === 'customer' || $firstType === 'walkin') {
                     $partyType = \App\Models\Customer::class;
                     $partyId   = $request->vendor_id[0] ?? null;
+                } else {
+                    $partyType = \App\Models\Account::class;
+                    $partyId   = $request->vendor_id[0] ?? null;
                 }
             }
 

@@ -563,7 +563,6 @@ class BalanceService
      */
     public function getAccountsReceivableId(?int $branchId = null): int
     {
-        $this->ensureDefaultCOA($branchId);
 
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
@@ -585,7 +584,6 @@ class BalanceService
      */
     public function getSalesRevenueId(?int $branchId = null): int
     {
-        $this->ensureDefaultCOA($branchId);
 
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
@@ -607,7 +605,6 @@ class BalanceService
      */
     public function getCashAccountId(?int $branchId = null): int
     {
-        $this->ensureDefaultCOA($branchId);
 
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
@@ -629,7 +626,6 @@ class BalanceService
      */
     public function getAccountsPayableId(?int $branchId = null): int
     {
-        $this->ensureDefaultCOA($branchId);
 
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
@@ -651,7 +647,6 @@ class BalanceService
      */
     public function getPurchaseExpenseId(?int $branchId = null): int
     {
-        $this->ensureDefaultCOA($branchId);
 
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
@@ -679,7 +674,6 @@ class BalanceService
      */
     public function getPurchaseExpensiveId(?int $branchId = null): int
     {
-        $this->ensureDefaultCOA($branchId);
 
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
@@ -718,9 +712,6 @@ class BalanceService
             $branchId = auth()->user()->getBranchId();
         }
         $branchId = $branchId ?? 1;
-
-        // First ensure COA heads exist
-        $this->ensureDefaultCOA($branchId);
 
         // Get head IDs for Cash/Bank/Asset-type heads by name for this branch
         $cashBankHeadIds = \App\Models\AccountHead::where('branch_id', $branchId)

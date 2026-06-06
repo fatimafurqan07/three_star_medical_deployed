@@ -510,7 +510,7 @@
             <div class="modal-content rounded-3 shadow border-0">
                 <div class="modal-header text-white" style="background: linear-gradient(135deg, #f59e0b, #ef6c00);">
                     <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle-fill"></i> Quick Add Narration</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="quickNarrationForm">
                     @csrf
@@ -526,7 +526,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 p-3 bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn text-white px-4 fw-bold" style="background: linear-gradient(135deg, #f59e0b, #ef6c00);">Save Narration</button>
                     </div>
                 </form>
