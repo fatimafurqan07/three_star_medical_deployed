@@ -267,6 +267,24 @@ class ReportingController extends Controller
             if ($branchId)    $whStockQuery->where('warehouses.branch_id', $branchId);
             $whStockAll = $whStockQuery->get()->groupBy('product_id');
 
+            // ── 2b. Bulk-fetch batch/lot stock (product_batches) ─────────────
+            $batchQuery = DB::table('product_batches')
+                ->whereIn('product_id', $productIds)
+                ->where('qty_remaining', '>', 0)
+                ->select(
+                    'product_id',
+                    'batch_number',
+                    'qty_remaining',
+                    'exp_date',
+                    'mfg_date',
+                    'status',
+                    'source_type'
+                )
+                ->orderBy('exp_date');
+            if ($warehouseId) $batchQuery->where('warehouse_id', $warehouseId);
+            if ($branchId)    $batchQuery->where('branch_id', $branchId);
+            $batchAll = $batchQuery->get()->groupBy('product_id');
+
             // ── 3. Bulk-fetch stock movements (Initial & Period) ────────────
             // We fetch everything in one query to avoid N+1 issues.
             // stock_movements.qty is +ve for IN, -ve for OUT.
@@ -416,6 +434,30 @@ class ReportingController extends Controller
                         'name'           => $u->name,
                         'pieces_per_box' => $u->pieces_per_box,
                     ])->toArray() : [],
+                    'batches'                  => (function() use ($batchAll, $pid, $displayBalance) {
+                        $mapped = $batchAll->get($pid, collect())->map(fn($b) => [
+                            'batch_number'  => $b->batch_number,
+                            'qty_remaining' => (float)$b->qty_remaining,
+                            'exp_date'      => $b->exp_date,
+                            'mfg_date'      => $b->mfg_date,
+                            'status'        => $b->status,
+                            'source_type'   => $b->source_type,
+                        ])->values()->toArray();
+
+                        $sumBatchQty = array_sum(array_column($mapped, 'qty_remaining'));
+                        $unbatchedQty = $displayBalance - $sumBatchQty;
+                        if ($unbatchedQty > 0.001) {
+                            $mapped[] = [
+                                'batch_number'  => 'Unbatched Stock',
+                                'qty_remaining' => (float)$unbatchedQty,
+                                'exp_date'      => null,
+                                'mfg_date'      => null,
+                                'status'        => 'normal',
+                                'source_type'   => 'unbatched_stock',
+                            ];
+                        }
+                        return $mapped;
+                    })(),
                 ];
             }
 
@@ -2693,8 +2735,354 @@ class ReportingController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+
         }
     }
+
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  PRODUCT LEDGER REPORT
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function product_ledger_report()
+    {
+        $products    = \App\Models\Product::orderBy('item_name')->get();
+        $warehouses  = \App\Models\Warehouse::orderBy('warehouse_name')->get();
+        $categories  = \App\Models\Category::orderBy('name')->get();
+        $subCategories = \App\Models\Subcategory::orderBy('name')->get();
+        $brands      = \App\Models\Brand::orderBy('name')->get();
+        
+        $isSuperAdmin = $this->isSuperAdmin();
+        $branches    = $isSuperAdmin
+            ? DB::table('branches')->select('id', 'name')->orderBy('name')->get()
+            : collect();
+
+        return view('admin_panel.reporting.product_ledger_report', 
+            compact('products', 'warehouses', 'categories', 'subCategories', 'brands', 'isSuperAdmin', 'branches'));
+    }
+
+    public function fetchProductLedger(\Illuminate\Http\Request $request)
+    {
+        try {
+            $productId   = $request->input('product_id');
+            $startDate   = $request->input('start_date');
+            $endDate     = $request->input('end_date');
+            $warehouseId = $request->input('warehouse_id');
+            $branchId    = $request->input('branch_id');
+            
+            if (!$branchId || $branchId === 'all') {
+                $branchId = $this->getBranchId();
+            } else {
+                $branchId = (int)$branchId;
+            }
+
+            if (!$productId) {
+                return response()->json(['success' => false, 'message' => 'Product is required.'], 422);
+            }
+
+            $product = DB::table('products')
+                ->leftJoin('units',      'units.id',      '=', 'products.unit_id')
+                ->leftJoin('brands',     'brands.id',     '=', 'products.brand_id')
+                ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+                ->select(
+                    'products.id', 'products.item_code', 'products.item_name',
+                    'products.size_mode', 'products.pieces_per_box',
+                    'products.sale_price_per_piece', 'products.sale_price_per_box',
+                    'products.purchase_price_per_piece', 'products.purchase_price_per_box',
+                    DB::raw('COALESCE(units.name, "pcs") as unit_name'),
+                    DB::raw('COALESCE(brands.name, "-") as brand_name'),
+                    DB::raw('COALESCE(categories.name, "-") as category_name')
+                )
+                ->where('products.id', $productId)
+                ->first();
+
+            if (!$product) {
+                return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
+            }
+
+            $rows = [];
+
+            // ── Opening Balance ──────────────────────────────────────────────
+            $purchBeforeQ = DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->where('purchase_items.product_id', $productId)
+                ->where('purchases.status_purchase', '!=', 'draft');
+            if ($branchId)    $purchBeforeQ->where('purchases.branch_id', $branchId);
+            if ($warehouseId) $purchBeforeQ->where('purchase_items.warehouse_id', $warehouseId);
+            if ($startDate)   $purchBeforeQ->where('purchases.purchase_date', '<', $startDate);
+            $purchasedBefore = (float)$purchBeforeQ->sum(
+                DB::raw("COALESCE(NULLIF(purchase_items.boxes_qty * purchase_items.pieces_per_box, 0), purchase_items.qty)")
+            );
+
+            $saleBeforeQ = DB::table('sale_items')
+                ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                ->where('sale_items.product_id', $productId)
+                ->whereIn('sales.sale_status', ['posted', 'post', 'in_delivery']);
+            if ($branchId)    $saleBeforeQ->where('sales.branch_id', $branchId);
+            if ($warehouseId) $saleBeforeQ->where('sale_items.warehouse_id', $warehouseId);
+            if ($startDate)   $saleBeforeQ->where('sales.sale_date', '<', $startDate);
+            $soldBefore = (float)$saleBeforeQ->sum(DB::raw("COALESCE(NULLIF(sale_items.total_pieces, 0), sale_items.qty * " . (int)$product->pieces_per_box . ")"));
+
+            // Delivery note before
+            $dcBeforeQ = DB::table('delivery_note_items')
+                ->join('delivery_notes', 'delivery_notes.id', '=', 'delivery_note_items.dc_note_id')
+                ->where('delivery_note_items.product_id', $productId);
+            if ($branchId)    $dcBeforeQ->where('delivery_notes.branch_id', $branchId);
+            if ($warehouseId) $dcBeforeQ->where('delivery_note_items.warehouse_id', $warehouseId);
+            if ($startDate)   $dcBeforeQ->where('delivery_notes.delivery_date', '<', $startDate);
+            $dcBefore = (float)$dcBeforeQ->sum(DB::raw("COALESCE(NULLIF(delivery_note_items.total_pieces, 0), delivery_note_items.qty * " . (int)$product->pieces_per_box . ")"));
+
+            $srBeforeQ = DB::table('sale_return_items')
+                ->join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                ->where('sale_return_items.product_id', $productId)
+                ->where('sale_returns.status', 'posted');
+            if ($branchId)    $srBeforeQ->where('sale_returns.branch_id', $branchId);
+            if ($warehouseId) $srBeforeQ->where('sale_return_items.warehouse_id', $warehouseId);
+            if ($startDate)   $srBeforeQ->where('sale_returns.return_date', '<', $startDate);
+            $saleRetBefore = (float)$srBeforeQ->sum('sale_return_items.qty');
+
+            $prBeforeQ = DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->where('purchase_return_items.product_id', $productId);
+            if ($branchId)    $prBeforeQ->where('purchase_returns.branch_id', $branchId);
+            if ($warehouseId) $prBeforeQ->where('purchase_return_items.warehouse_id', $warehouseId);
+            if ($startDate)   $prBeforeQ->where('purchase_returns.return_date', '<', $startDate);
+            $purchRetBefore = (float)$prBeforeQ->sum('purchase_return_items.qty');
+
+            $obQ = DB::table('product_batches')
+                ->where('product_id', $productId)
+                ->where(function ($q) {
+                    $q->where('source_type', 'opening_stock')
+                      ->orWhereRaw("batch_number REGEXP '^[0]+$'");
+                });
+            if ($branchId)    $obQ->where('branch_id', $branchId);
+            if ($warehouseId) $obQ->where('warehouse_id', $warehouseId);
+            if ($startDate)   $obQ->where('created_at', '<', $startDate . ' 00:00:00');
+            $openingStockQty = (float)$obQ->sum('qty_remaining');
+
+            $openingBalance = $openingStockQty + $purchasedBefore - $soldBefore - $dcBefore + $saleRetBefore - $purchRetBefore;
+
+            $rows[] = [
+                'sort_key'    => '0000-00-00_000',
+                'type'        => 'opening',
+                'date'        => $startDate ?? now()->format('Y-m-d'),
+                'description' => 'Opening Balance',
+                'ref'         => '-',
+                'qty_in'      => null,
+                'qty_out'     => null,
+                'sale_price'  => null,
+                'cost_price'  => null,
+                'balance'     => round($openingBalance, 4),
+            ];
+
+            // ── 1. PURCHASES (Stock IN) ──────────────────────────────────────
+            $purchQ = DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->leftJoin('vendors', 'vendors.id', '=', 'purchases.vendor_id')
+                ->where('purchase_items.product_id', $productId)
+                ->where('purchases.status_purchase', '!=', 'draft')
+                ->select(
+                    'purchases.purchase_date as date',
+                    DB::raw('COALESCE(NULLIF(purchases.invoice_no, ""), purchases.po_ref, CONCAT("GRN#", purchases.id)) as ref'),
+                    DB::raw('COALESCE(vendors.name, "Unknown Vendor") as party'),
+                    DB::raw('COALESCE(NULLIF(purchase_items.boxes_qty * purchase_items.pieces_per_box, 0), purchase_items.qty) as qty'),
+                    'purchase_items.price',
+                    'purchase_items.line_total',
+                    'purchase_items.batch_no',
+                    'purchase_items.exp_date'
+                );
+            if ($branchId)    $purchQ->where('purchases.branch_id', $branchId);
+            if ($warehouseId) $purchQ->where('purchase_items.warehouse_id', $warehouseId);
+            if ($startDate)   $purchQ->where('purchases.purchase_date', '>=', $startDate);
+            if ($endDate)     $purchQ->where('purchases.purchase_date', '<=', $endDate);
+            foreach ($purchQ->get() as $r) {
+                $batchLabel = !empty($r->batch_no) ? ' [Batch: ' . $r->batch_no . (!empty($r->exp_date) ? ', Exp: ' . $r->exp_date : '') . ']' : '';
+                $rows[] = [
+                    'sort_key'    => $r->date . '_1',
+                    'type'        => 'purchase',
+                    'date'        => $r->date,
+                    'description' => 'Purchase GRN (' . $r->party . ')' . $batchLabel,
+                    'ref'         => $r->ref,
+                    'qty_in'      => (float)$r->qty,
+                    'qty_out'     => null,
+                    'sale_price'  => null,
+                    'cost_price'  => (float)$r->price,
+                    'balance'     => null,
+                ];
+            }
+
+            // ── 2. SALES (Stock OUT) ─────────────────────────────────────────
+            $saleQ = DB::table('sale_items')
+                ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                ->leftJoin('customers', 'customers.id', '=', 'sales.customer_id')
+                ->where('sale_items.product_id', $productId)
+                ->whereIn('sales.sale_status', ['posted', 'post', 'in_delivery'])
+                ->select(
+                    'sales.sale_date as date',
+                    DB::raw('COALESCE(NULLIF(sales.invoice_no, ""), CONCAT("SIN#", sales.id)) as ref'),
+                    DB::raw('COALESCE(customers.customer_name, "Walk-in") as party'),
+                    DB::raw("COALESCE(NULLIF(sale_items.total_pieces, 0), sale_items.qty * " . (int)$product->pieces_per_box . ") as qty"),
+                    'sale_items.price',
+                    'sale_items.total'
+                );
+            if ($branchId)    $saleQ->where('sales.branch_id', $branchId);
+            if ($warehouseId) $saleQ->where('sale_items.warehouse_id', $warehouseId);
+            if ($startDate)   $saleQ->where('sales.sale_date', '>=', $startDate);
+            if ($endDate)     $saleQ->where('sales.sale_date', '<=', $endDate);
+            foreach ($saleQ->get() as $r) {
+                $rows[] = [
+                    'sort_key'    => $r->date . '_2',
+                    'type'        => 'sale',
+                    'date'        => $r->date,
+                    'description' => 'Sale Invoice (' . $r->party . ')',
+                    'ref'         => $r->ref,
+                    'qty_in'      => null,
+                    'qty_out'     => (float)$r->qty,
+                    'sale_price'  => (float)$r->price,
+                    'cost_price'  => null,
+                    'balance'     => null,
+                ];
+            }
+
+            // ── 3. DELIVERY CHALLANS (Stock OUT) ─────────────────────────────
+            $dcQ = DB::table('delivery_note_items')
+                ->join('delivery_notes', 'delivery_notes.id', '=', 'delivery_note_items.dc_note_id')
+                ->leftJoin('customers', 'customers.id', '=', 'delivery_notes.customer_id')
+                ->where('delivery_note_items.product_id', $productId)
+                ->select(
+                    'delivery_notes.delivery_date as date',
+                    DB::raw('COALESCE(delivery_notes.dc_no, "-") as ref'),
+                    DB::raw('COALESCE(customers.customer_name, "Walk-in") as party'),
+                    DB::raw("COALESCE(NULLIF(delivery_note_items.total_pieces, 0), delivery_note_items.qty * " . (int)$product->pieces_per_box . ") as qty"),
+                    'delivery_note_items.price',
+                    'delivery_note_items.line_total'
+                );
+            if ($branchId)    $dcQ->where('delivery_notes.branch_id', $branchId);
+            if ($warehouseId) $dcQ->where('delivery_note_items.warehouse_id', $warehouseId);
+            if ($startDate)   $dcQ->where('delivery_notes.delivery_date', '>=', $startDate);
+            if ($endDate)     $dcQ->where('delivery_notes.delivery_date', '<=', $endDate);
+            foreach ($dcQ->get() as $r) {
+                $rows[] = [
+                    'sort_key'    => $r->date . '_3',
+                    'type'        => 'delivery_challan',
+                    'date'        => $r->date,
+                    'description' => 'Delivery Challan (' . $r->party . ')',
+                    'ref'         => $r->ref,
+                    'qty_in'      => null,
+                    'qty_out'     => (float)$r->qty,
+                    'sale_price'  => (float)$r->price,
+                    'cost_price'  => null,
+                    'balance'     => null,
+                ];
+            }
+
+            // ── 4. SALE RETURNS (Stock IN) ────────────────────────────────────
+            $srQ = DB::table('sale_return_items')
+                ->join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                ->leftJoin('customers', 'customers.id', '=', 'sale_returns.customer_id')
+                ->where('sale_return_items.product_id', $productId)
+                ->where('sale_returns.status', 'posted')
+                ->select(
+                    'sale_returns.return_date as date',
+                    DB::raw('COALESCE(sale_returns.return_invoice, "-") as ref'),
+                    DB::raw('COALESCE(customers.customer_name, "Walk-in") as party'),
+                    'sale_return_items.qty',
+                    'sale_return_items.price'
+                );
+            if ($branchId)    $srQ->where('sale_returns.branch_id', $branchId);
+            if ($warehouseId) $srQ->where('sale_return_items.warehouse_id', $warehouseId);
+            if ($startDate)   $srQ->where('sale_returns.return_date', '>=', $startDate);
+            if ($endDate)     $srQ->where('sale_returns.return_date', '<=', $endDate);
+            foreach ($srQ->get() as $r) {
+                $rows[] = [
+                    'sort_key'    => $r->date . '_4',
+                    'type'        => 'sale_return',
+                    'date'        => $r->date,
+                    'description' => 'Sale Return (' . $r->party . ')',
+                    'ref'         => $r->ref,
+                    'qty_in'      => (float)$r->qty,
+                    'qty_out'     => null,
+                    'sale_price'  => (float)$r->price,
+                    'cost_price'  => null,
+                    'balance'     => null,
+                ];
+            }
+
+            // ── 5. PURCHASE RETURNS (Stock OUT) ──────────────────────────────
+            $prQ = DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->leftJoin('vendors', 'vendors.id', '=', 'purchase_returns.vendor_id')
+                ->where('purchase_return_items.product_id', $productId)
+                ->select(
+                    'purchase_returns.return_date as date',
+                    DB::raw('COALESCE(purchase_returns.return_invoice, "-") as ref'),
+                    DB::raw('COALESCE(vendors.name, "Unknown Vendor") as party'),
+                    'purchase_return_items.qty',
+                    'purchase_return_items.price'
+                );
+            if ($branchId)    $prQ->where('purchase_returns.branch_id', $branchId);
+            if ($warehouseId) $prQ->where('purchase_return_items.warehouse_id', $warehouseId);
+            if ($startDate)   $prQ->where('purchase_returns.return_date', '>=', $startDate);
+            if ($endDate)     $prQ->where('purchase_returns.return_date', '<=', $endDate);
+            foreach ($prQ->get() as $r) {
+                $rows[] = [
+                    'sort_key'    => $r->date . '_5',
+                    'type'        => 'purchase_return',
+                    'date'        => $r->date,
+                    'description' => 'Purchase Return (' . $r->party . ')',
+                    'ref'         => $r->ref,
+                    'qty_in'      => null,
+                    'qty_out'     => (float)$r->qty,
+                    'sale_price'  => null,
+                    'cost_price'  => (float)$r->price,
+                    'balance'     => null,
+                ];
+            }
+
+            // ── Sort chronologically ──────────────────────────────────────────
+            usort($rows, fn($a, $b) => strcmp($a['sort_key'], $b['sort_key']));
+
+            // ── Running balance ───────────────────────────────────────────────
+            $balance        = 0;
+            $totalQtyIn     = 0;
+            $totalQtyOut    = 0;
+            $totalSaleValue = 0;
+
+            foreach ($rows as &$row) {
+                if ($row['type'] === 'opening') {
+                    $balance = $row['balance'];
+                } else {
+                    $in  = (float)($row['qty_in']  ?? 0);
+                    $out = (float)($row['qty_out'] ?? 0);
+                    $balance        += $in - $out;
+                    $row['balance']  = round($balance, 4);
+                    $totalQtyIn     += $in;
+                    $totalQtyOut    += $out;
+                    if (!empty($row['sale_price']) && $out > 0) {
+                        $totalSaleValue += $row['sale_price'] * $out;
+                    }
+                }
+            }
+            unset($row);
+
+            return response()->json([
+                'success' => true,
+                'rows'    => $rows,
+                'summary' => [
+                    'product'          => $product,
+                    'opening_balance'  => round($openingBalance, 4),
+                    'total_qty_in'     => $totalQtyIn,
+                    'total_qty_out'    => $totalQtyOut,
+                    'closing_balance'  => round($balance, 4),
+                    'total_sale_value' => round($totalSaleValue, 2),
+                    'period_start'     => $startDate,
+                    'period_end'       => $endDate,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
 }
-
-

@@ -31,11 +31,19 @@ class NarrationController extends Controller
 
             return redirect()->back()->with('success', 'Narration updated successfully.');
         } else {
-            // Create
-            Narration::create([
+            $new = Narration::create([
                 'expense_head' => $request->expense_head,
                 'narration' => $request->narration,
             ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Narration added successfully.',
+                    'id' => $new->id,
+                    'narration' => $new->narration,
+                ]);
+            }
 
             return redirect()->back()->with('success', 'Narration added successfully.');
         }

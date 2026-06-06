@@ -78,14 +78,14 @@
                                 <label class="form-label">Select Voucher Head</label>
                                 <select name="expense_head" id="expense_head" class="form-select form-control" required>
                                     <option value="" disabled>Choose...</option>
-                                    <option>Bank Charges</option>
-                                    <option>Fuel Expense</option>
-                                    <option>Lost Stock</option>
-                                    <option>journal voucher</option>
-                                    <option>receipt voucher</option>
-                                    <option>payment voucher</option>
-                                    <option>income voucher</option>
-                                    <option>expense voucher</option>
+                                    <option value="Bank Charges">Bank Charges</option>
+                                    <option value="Fuel Expense">Fuel Expense</option>
+                                    <option value="Lost Stock">Lost Stock</option>
+                                    <option value="journal voucher">journal voucher</option>
+                                    <option value="Receipts Voucher">receipt voucher</option>
+                                    <option value="Payment voucher">payment voucher</option>
+                                    <option value="income voucher">income voucher</option>
+                                    <option value="Expense voucher">expense voucher</option>
                                 </select>
                             </div>
 

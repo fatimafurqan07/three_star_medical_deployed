@@ -94,7 +94,9 @@ class AccountsHeadController extends Controller
         $anyMissing = $criticalCOA->contains('complete', false);
         $branches = $this->isSuperAdmin() ? \App\Models\Branch::all() : [];
 
-        return view('admin_panel.chart_of_accounts', compact('heads', 'accounts', 'criticalCOA', 'anyMissing', 'branches'));
+        $isSuperAdmin = $this->isSuperAdmin();
+
+        return view('admin_panel.chart_of_accounts', compact('heads', 'accounts', 'criticalCOA', 'anyMissing', 'branches', 'isSuperAdmin'));
     }
 
     public function storeHead(Request $request)
@@ -220,5 +222,71 @@ class AccountsHeadController extends Controller
         }
 
         return back()->with('success', count($created).' critical account(s) have been set up successfully!');
+    }
+
+    public function updateHead(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|unique:account_heads,name,' . $id,
+        ]);
+
+        $head = \App\Models\AccountHead::findOrFail($id);
+        $head->update([
+            'name' => $request->name,
+        ]);
+
+        return back()->with('success', "Category '{$head->name}' updated successfully!");
+    }
+
+    public function destroyHead($id)
+    {
+        $head = \App\Models\AccountHead::findOrFail($id);
+        $linkedAccounts = $head->accounts;
+
+        $hasBalance = false;
+        $activeAccountNames = [];
+        foreach ($linkedAccounts as $acc) {
+            $bal = (float)$acc->calculated_balance;
+            if (abs($bal) > 0.01) {
+                $hasBalance = true;
+                $activeAccountNames[] = $acc->title;
+            }
+        }
+
+        // Non-super-admins cannot delete heads with active balance accounts
+        if ($hasBalance && ! auth()->user()->isSuperAdmin()) {
+            $names = implode(', ', $activeAccountNames);
+            return back()->with('error', "Cannot delete category '{$head->name}'. Linked account(s) have active balances: {$names}. Only a Super Admin can force-delete.");
+        }
+
+        // Delete all linked accounts + all FK-referencing records to avoid constraint violations
+        foreach ($linkedAccounts as $acc) {
+            $accId = $acc->id;
+
+            // 1. Delete voucher_details referencing this account
+            \Illuminate\Support\Facades\DB::table('voucher_details')
+                ->where('account_id', $accId)->delete();
+
+            // 2. Delete journal_entries referencing this account
+            \App\Models\JournalEntry::where('account_id', $accId)->delete();
+
+            // 3. Nullify cdrs.account_id (nullable column)
+            \Illuminate\Support\Facades\DB::table('cdrs')
+                ->where('account_id', $accId)->update(['account_id' => null]);
+
+            // 4. Nullify cheques.actual_account_id if column exists
+            try {
+                \Illuminate\Support\Facades\DB::table('cheques')
+                    ->where('actual_account_id', $accId)->update(['actual_account_id' => null]);
+            } catch (\Exception $e) {
+                // Column may not exist in all deployments — safe to ignore
+            }
+
+            $acc->delete();
+        }
+
+        $head->delete();
+
+        return back()->with('success', "Category '{$head->name}' and all its linked accounts deleted successfully!");
     }
 }

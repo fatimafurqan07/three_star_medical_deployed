@@ -43,6 +43,10 @@
                                 data-target="#addHeadModal">
                                 <i class="fas fa-folder-plus"></i> Add Category
                             </button>
+                            <button class="btn btn-outline-dark d-flex align-items-center gap-2" data-toggle="modal"
+                                data-target="#manageHeadsModal">
+                                <i class="fas fa-folder"></i> Manage Categories
+                            </button>
                         </div>
                     @endcan
                 </div>
@@ -568,10 +572,162 @@
         </div>
     </div>
 
+    <!-- Manage Categories Modal -->
+    <div class="modal fade" id="manageHeadsModal" tabindex="-1" role="dialog" aria-labelledby="manageHeadsLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold ms-2" id="manageHeadsLabel">Manage Categories (Account Heads)</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4 pt-3">
+                    <p class="text-muted small mb-4 ms-1">Update or delete existing account categories. Note: Categories with active balance accounts cannot be deleted.</p>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" style="width:100%;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="py-2 text-secondary fw-semibold text-uppercase small" style="width: 10%;">#</th>
+                                    <th class="py-2 text-secondary fw-semibold text-uppercase small" style="width: 50%;">Category Name</th>
+                                    <th class="py-2 text-secondary fw-semibold text-uppercase small text-center" style="width: 20%;">Accounts Linked</th>
+                                    <th class="py-2 text-secondary fw-semibold text-uppercase small text-center" style="width: 20%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($heads as $head)
+                                    @php
+                                        $linkedAccounts = $head->accounts;
+                                        $hasBalance = false;
+                                        $accountNames = [];
+                                        foreach ($linkedAccounts as $la) {
+                                            $accountNames[] = $la->title;
+                                            if (abs($la->calculated_balance) > 0.01) {
+                                                $hasBalance = true;
+                                            }
+                                        }
+                                        $accountsListJson = json_encode($accountNames);
+                                    @endphp
+                                    <tr id="head-row-{{ $head->id }}">
+                                        <td class="small fw-bold text-muted">{{ $loop->iteration }}</td>
+                                        <td>
+                                            <span class="head-name-text fw-semibold text-dark">{{ $head->name }}</span>
+                                            <!-- Hidden inline edit form -->
+                                            <div class="head-edit-form d-none mt-1">
+                                                <form action="{{ route('account-heads.update', $head->id) }}" method="POST" class="d-flex gap-2 align-items-center">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <input type="text" name="name" class="form-control form-control-sm" value="{{ $head->name }}" required style="max-width: 250px;">
+                                                    <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-check"></i></button>
+                                                    <button type="button" class="btn btn-sm btn-light cancel-edit-head-btn"><i class="fas fa-times"></i></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary text-white rounded-pill px-3">{{ $linkedAccounts->count() }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <button type="button" class="btn btn-sm btn-outline-warning edit-head-btn" title="Edit Category">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-head-trigger-btn"
+                                                    data-id="{{ $head->id }}"
+                                                    data-name="{{ $head->name }}"
+                                                    data-has-accounts="{{ $linkedAccounts->isNotEmpty() ? 'true' : 'false' }}"
+                                                    data-has-balance="{{ $hasBalance ? 'true' : 'false' }}"
+                                                    data-account-names="{{ $accountsListJson }}"
+                                                    title="Delete Category">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-medium" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Category Modal -->
+    <div class="modal fade" id="deleteHeadModal" tabindex="-1" role="dialog" aria-labelledby="deleteHeadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger ms-2" id="deleteHeadModalLabel">Delete Category</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4 pt-3">
+                    <!-- Case 1: Cannot delete (non-super-admin, has balance) -->
+                    <div id="delHeadErrorView" class="d-none">
+                        <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3">
+                            <i class="fas fa-exclamation-triangle mt-1"></i>
+                            <div>
+                                <strong class="d-block">Deletion Denied</strong>
+                                <span id="delHeadErrorText">This category has linked accounts with active balances. Only a Super Admin can force-delete it.</span>
+                            </div>
+                        </div>
+                        <p class="text-secondary small mt-3">Linked accounts with active balances (Non-Zero):</p>
+                        <ul id="delHeadActiveAccountsList" class="text-danger fw-bold small"></ul>
+                    </div>
+
+                    <!-- Case 1B: Super Admin override — has balance but can force-delete -->
+                    <div id="delHeadSuperAdminView" class="d-none">
+                        <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3 mb-3">
+                            <i class="fas fa-shield-alt mt-1 fs-5"></i>
+                            <div>
+                                <strong class="d-block">⚠️ Super Admin — Force Delete Warning</strong>
+                                <span>The following accounts have <strong>active balances</strong>. Deleting them will permanently erase all financial data including journal entries.</span>
+                            </div>
+                        </div>
+                        <p class="text-secondary small mb-1">Accounts with active balances:</p>
+                        <ul id="delHeadSuperAdminAccountsList" class="text-danger fw-bold small mb-3"></ul>
+                        <p class="fw-bold text-dark mb-0">Account ma balance ha — delete kardon? <strong id="delSuperAdminHeadName" class="text-danger"></strong></p>
+                    </div>
+
+                    <!-- Case 2: Can delete with confirmation (0 balance accounts) -->
+                    <div id="delHeadConfirmView" class="d-none">
+                        <p class="text-dark">The following account(s) are linked to this category:</p>
+                        <ul id="delHeadLinkedAccountsList" class="text-secondary fw-semibold small mb-3"></ul>
+                        <div class="alert alert-warning rounded-3 small">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            <strong>Warning:</strong> Deleting this category will also permanently delete all the linked accounts listed above.
+                        </div>
+                        <p class="fw-bold text-dark">Are you sure you want to delete this category and all its linked accounts?</p>
+                    </div>
+
+                    <!-- Case 3: Simple confirm (no accounts) -->
+                    <div id="delHeadSimpleView" class="d-none">
+                        <p class="text-dark">Are you sure you want to delete the category <strong id="delSimpleHeadName"></strong>?</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-medium" data-dismiss="modal">Close</button>
+                    <form id="deleteHeadForm" method="POST" class="d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" id="confirmDeleteHeadBtn" class="btn btn-danger px-4 fw-bold shadow-sm d-none">Yes, Delete All</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @section('js')
     <script>
+        // PHP-level super admin flag (set by controller via BranchScoped trait)
+        const IS_SUPER_ADMIN = {{ $isSuperAdmin ? 'true' : 'false' }};
+
         $(document).ready(function() {
             if ($.fn.DataTable.isDataTable('.datanew')) {
                 $('.datanew').DataTable().destroy();
@@ -606,6 +762,94 @@
             $('#editAccountForm').attr('action', actionUrl);
 
             $('#editAccountModal').modal('show');
+        });
+
+        // Toggle inline editing for category heads
+        $(document).on('click', '.edit-head-btn', function() {
+            const row = $(this).closest('tr');
+            row.find('.head-name-text').addClass('d-none');
+            row.find('.head-edit-form').removeClass('d-none');
+            row.find('.edit-head-btn').addClass('d-none');
+            row.find('.delete-head-trigger-btn').addClass('d-none');
+        });
+
+        $(document).on('click', '.cancel-edit-head-btn', function() {
+            const row = $(this).closest('tr');
+            row.find('.head-name-text').removeClass('d-none');
+            row.find('.head-edit-form').addClass('d-none');
+            row.find('.edit-head-btn').removeClass('d-none');
+            row.find('.delete-head-trigger-btn').removeClass('d-none');
+        });
+
+        // Trigger dynamic deletion modal
+        $(document).on('click', '.delete-head-trigger-btn', function() {
+            const id          = $(this).data('id');
+            const name        = $(this).data('name');
+            const hasAccounts = $(this).data('has-accounts');
+            const hasBalance  = $(this).data('has-balance');
+            const accounts    = $(this).data('account-names') || [];
+            // Use the PHP-level constant — more reliable than reading data-attribute
+            const isSuperAdmin = IS_SUPER_ADMIN;
+
+            // Reset all views
+            $('#delHeadErrorView').addClass('d-none');
+            $('#delHeadSuperAdminView').addClass('d-none');
+            $('#delHeadConfirmView').addClass('d-none');
+            $('#delHeadSimpleView').addClass('d-none');
+            $('#confirmDeleteHeadBtn').addClass('d-none');
+            $('#delHeadActiveAccountsList').empty();
+            $('#delHeadSuperAdminAccountsList').empty();
+            $('#delHeadLinkedAccountsList').empty();
+
+            // Set Form action
+            const actionUrl = "{{ url('/accounts-head') }}/" + id + "/delete";
+            $('#deleteHeadForm').attr('action', actionUrl);
+
+            if (!hasAccounts) {
+                // Case 3: No linked accounts — simple confirmation
+                $('#delSimpleHeadName').text(name);
+                $('#delHeadSimpleView').removeClass('d-none');
+                $('#confirmDeleteHeadBtn').text('Yes, Delete').removeClass('d-none');
+
+            } else if (hasBalance) {
+                if (isSuperAdmin) {
+                    // Case 1B: Super Admin — can force-delete even with balance
+                    accounts.forEach(accName => {
+                        $('#delHeadSuperAdminAccountsList').append(`<li>${accName}</li>`);
+                    });
+                    $('#delSuperAdminHeadName').text('"' + name + '"');
+                    $('#delHeadSuperAdminView').removeClass('d-none');
+                    $('#confirmDeleteHeadBtn')
+                        .text('Yes, Force Delete All')
+                        .removeClass('d-none')
+                        .addClass('btn-danger');
+                } else {
+                    // Case 1: Non-super-admin — block deletion
+                    accounts.forEach(accName => {
+                        $('#delHeadActiveAccountsList').append(`<li>${accName}</li>`);
+                    });
+                    $('#delHeadErrorView').removeClass('d-none');
+                    // Confirm button stays hidden — deletion is blocked
+                }
+            } else {
+                // Case 2: Linked accounts with 0 balance — cascade confirm
+                accounts.forEach(accName => {
+                    $('#delHeadLinkedAccountsList').append(`<li><strong>${accName}</strong> — is linked. Do you still want to delete it?</li>`);
+                });
+                $('#delHeadConfirmView').removeClass('d-none');
+                $('#confirmDeleteHeadBtn').text('Yes, Delete All').removeClass('d-none');
+            }
+
+            // Close the Manage heads modal and open the Delete confirm modal
+            $('#manageHeadsModal').modal('hide');
+            $('#deleteHeadModal').modal('show');
+        });
+
+        // Re-open Manage Heads modal if delete modal is closed without action
+        $('#deleteHeadModal').on('hidden.bs.modal', function () {
+            if ($('#deleteHeadModal').hasClass('show') === false) {
+                $('#manageHeadsModal').modal('show');
+            }
         });
     </script>
 @endsection

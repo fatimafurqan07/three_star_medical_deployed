@@ -65,41 +65,54 @@
         }
 
         /* Dynamic Mega Menu Styling */
-        .mega-menu {
-            position: relative;
-        }
+        @media (min-width: 768px) {
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation {
+                position: relative !important;
+            }
 
-        .mega-menu .submenu {
-            width: max-content !important;
-            max-width: 95vw;
-            min-width: 220px;
-            left: 0;
-            right: auto;
-        }
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.mega-menu,
+            li.mega-menu,
+            .mega-menu {
+                position: static !important;
+            }
 
-        .mega-menu .col-group-wrapper {
-            display: flex;
-            flex-wrap: nowrap;
-            margin: 0 -8px;
-            /* Offset padding */
-        }
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.mega-menu .submenu,
+            li.mega-menu .submenu,
+            .mega-menu .submenu {
+                position: absolute !important;
+                width: 100% !important;
+                left: 0 !important;
+                right: 0 !important;
+            }
 
-        .mega-menu .col-group {
-            width: 240px;
-            /* Consistent column width */
-            flex: 0 0 auto;
-            border-right: 1px solid #f0f0f0;
-            padding: 0 16px;
-        }
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.mega-menu .submenu .col-group-wrapper,
+            li.mega-menu .submenu .col-group-wrapper {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                margin: 0 -8px !important;
+                /* Offset padding */
+            }
 
-        .mega-menu .col-group:last-child {
-            border-right: none;
-        }
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.mega-menu .submenu .col-group-wrapper .col-group,
+            li.mega-menu .submenu .col-group-wrapper .col-group {
+                flex: 0 1 auto !important;
+                width: 220px !important;
+                /* Consistent column width */
+                border-right: 1px solid #f0f0f0 !important;
+                padding: 0 16px !important;
+            }
 
-        /* Override Bootstrap col widths inside mega menu */
-        .mega-menu .col-md-3 {
-            flex: none;
-            max-width: none;
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.mega-menu .submenu .col-group-wrapper .col-group:last-child,
+            li.mega-menu .submenu .col-group-wrapper .col-group:last-child {
+                border-right: none !important;
+            }
+
+            /* Override Bootstrap col widths inside mega menu */
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.mega-menu .submenu .col-group-wrapper .col-md-3,
+            li.mega-menu .submenu .col-group-wrapper .col-md-3 {
+                flex: none !important;
+                max-width: none !important;
+            }
         }
 
         /* ── GLOBAL PRINT STYLES ─────────────────────────────────────────── */
@@ -826,6 +839,8 @@
                                                     class="fa-solid fa-tags"></i> Price Adjustment Report</a></li>
                                         <li><a href="{{ route('report.dc') }}"><i
                                                     class="fa-solid fa-truck"></i> DC Report</a></li>
+                                        <li><a href="{{ route('report.product.ledger') }}"><i
+                                                    class="fa-solid fa-book-open"></i> Product Ledger</a></li>
                                     </ul>
                                 </div>
                             @endcanany

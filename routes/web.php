@@ -419,6 +419,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/cheques/{id}/bounce', [ChequeController::class, 'bounce'])->name('cheques.bounce')->middleware('permission:sales.create');
 
     Route::post('/accounts-head/store', [AccountsHeadController::class, 'storeHead'])->name('account-heads.store');
+    Route::put('/accounts-head/{id}/update', [AccountsHeadController::class, 'updateHead'])->name('account-heads.update');
+    Route::delete('/accounts-head/{id}/delete', [AccountsHeadController::class, 'destroyHead'])->name('account-heads.destroy');
     Route::post('/accounts/store', [AccountsHeadController::class, 'storeAccount'])->name('accounts.store');
     Route::post('/accounts/{id}/toggle-status', [AccountsHeadController::class, 'toggleStatus'])->name('accounts.toggleStatus');
     Route::put('/accounts/{id}/update', [AccountsHeadController::class, 'updateAccount'])->name('accounts.update');
@@ -460,6 +462,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('report/dc', [ReportingController::class, 'dc_report'])->name('report.dc');
     Route::post('report/dc/fetch', [ReportingController::class, 'fetchDcReport'])->name('report.dc.fetch');
+
+    Route::get('report/product-ledger', [ReportingController::class, 'product_ledger_report'])->name('report.product.ledger');
+    Route::get('report/product-ledger/fetch', [ReportingController::class, 'fetchProductLedger'])->name('report.product.ledger.fetch');
 
     // Return modules list for permission dropdowns (AJAX)
     Route::get('/modules/list', function () {

@@ -768,6 +768,7 @@
                                     <th>Company / Cat.</th>
                                     <th>Stock Detail</th>
                                     <th>Warehouse Stock</th>
+                                    <th>Batch / Lot</th>
                                     @if($isSuperAdmin)
                                     <th>Branch</th>
                                     @endif
@@ -788,7 +789,7 @@
                             <tbody id="reportBody"></tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="{{ $isSuperAdmin ? 8 : 7 }}" class="text-end">Grand Totals:</th>
+                                    <th colspan="{{ $isSuperAdmin ? 9 : 8 }}" class="text-end">Grand Totals:</th>
                                     <th id="ftInit">0</th>
                                     <th id="ftPurchased">0</th>
                                     <th id="ftPurRet">0</th>
@@ -900,7 +901,7 @@
                 ordering: true,
                 pageLength: 25,
                 order: [
-                    [IS_SUPER_ADMIN ? 7 : 6, 'asc']
+                    [IS_SUPER_ADMIN ? 8 : 7, 'asc']
                 ],
                 language: {
                     search: '',
@@ -918,11 +919,11 @@
                         width: '38px'
                     },
                     {
-                        targets: IS_SUPER_ADMIN ? [7] : [6],
+                        targets: IS_SUPER_ADMIN ? [8] : [7],
                         className: 'text-center'
                     },
                     {
-                        targets: IS_SUPER_ADMIN ? [8, 9, 10, 11, 12, 13, 14, 15, 16, 18] : [7, 8, 9, 10, 11, 12, 13, 14, 15, 17],
+                        targets: IS_SUPER_ADMIN ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 19] : [8, 9, 10, 11, 12, 13, 14, 15, 16, 18],
                         className: 'text-right'
                     },
                 ],
@@ -944,6 +945,43 @@
 
             // Alias used in Detail PDF HTML builder
             function fmtN(v, dec) { return fmt(v, dec); }
+
+            // ── Batch/Lot cell ────────────────────────────────────────────────────────
+            function batchCell(r) {
+                var batches = r.batches || [];
+                if (!batches.length) {
+                    return '<span style="font-size:.72rem;color:#94a3b8;font-style:italic;">No batches</span>';
+                }
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+                var html = '<div style="display:flex;flex-direction:column;gap:4px;min-width:175px;max-height:160px;overflow-y:auto;padding-right:2px;">';
+                batches.forEach(function(b) {
+                    var expDate = b.exp_date ? new Date(b.exp_date) : null;
+                    var isExpired = expDate && expDate < today;
+                    var daysLeft = expDate ? Math.ceil((expDate - today) / (1000*60*60*24)) : null;
+                    var expColor = isExpired ? '#dc2626' : (daysLeft !== null && daysLeft <= 90 ? '#d97706' : '#15803d');
+                    var expIcon  = isExpired ? '⚠️' : (daysLeft !== null && daysLeft <= 90 ? '⏳' : '✅');
+                    
+                    var isOpening = b.source_type === 'opening_stock' || (b.batch_number && /^[0]+$/.test(b.batch_number.trim()));
+                    var isUnbatched = b.source_type === 'unbatched_stock';
+                    var statusBg = isOpening ? '#eff6ff' : (isUnbatched ? '#f1f5f9' : (b.status === 'expired' ? '#fee2e2' : (b.status === 'held' ? '#fef9c3' : '#f0fdf4')));
+                    var titleColor = isOpening ? '#1e40af' : (isUnbatched ? '#475569' : '#1e3a8a');
+                    var label = isOpening ? '📦 Opening Stock' : (isUnbatched ? '📦 Unbatched Stock' : '🏷️ ' + (b.batch_number || '-'));
+                    
+                    html += '<div style="background:' + statusBg + ';border:1px solid #e2e8f0;border-radius:6px;padding:4px 7px;">' +
+                        '<div style="font-weight:700;font-size:.78rem;color:' + titleColor + ';display:flex;align-items:center;gap:4px;">' +
+                            '<span>' + label + '</span>' +
+                            (b.exp_date ? '<span style="margin-left:auto;display:inline-flex;align-items:center;">' + expIcon + '</span>' : '') +
+                        '</div>' +
+                        '<div style="font-size:.7rem;color:#475569;margin-top:2px;">' +
+                            '<span style="color:#7c3aed;font-weight:600;">' + fmt(b.qty_remaining, 0) + ' pcs</span>' +
+                            (b.exp_date ? ' &nbsp;|&nbsp; <span style="color:' + expColor + ';">Exp: ' + b.exp_date + '</span>' : '') +
+                        '</div>' +
+                    '</div>';
+                });
+                html += '</div>';
+                return html;
+            }
 
             // ── Size mode badge ──────────────────────────────────────────────────
             var modeLabels = {
@@ -1126,6 +1164,7 @@
                         '</span>',
                         stockDetailCell(r),
                         whCell(r),
+                        batchCell(r),
                     ];
 
                     if (IS_SUPER_ADMIN) {

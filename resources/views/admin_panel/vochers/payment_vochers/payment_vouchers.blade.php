@@ -441,15 +441,20 @@
                                 <tbody>
                                     <tr>
                                         <td>
-                                            <div style="display:flex;gap:5px;">
-                                                <select name="narration_id[]" class="line-select narrationSelect">
-                                                    <option value="">Select / Add</option>
-                                                    @foreach ($narrations as $id => $name)
-                                                        <option value="{{ $id }}">{{ $name }}</option>
-                                                    @endforeach
-                                                </select>
+                                            <div style="display:flex;gap:5px;flex-direction:column;">
+                                                <div style="display:flex;gap:5px;align-items:center;">
+                                                    <select name="narration_id[]" class="line-select narrationSelect" style="flex:1;">
+                                                        <option value="">Select / Add</option>
+                                                        @foreach ($narrations as $id => $name)
+                                                            <option value="{{ $id }}">{{ $name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button type="button" class="btn btn-sm btn-outline-success btn-quick-narration" title="Quick Add Narration" style="padding: 2px 6px; border-radius: 4px; line-height: 1.2;">
+                                                        <i class="bi bi-plus-lg"></i>
+                                                    </button>
+                                                </div>
                                                 <input type="text" class="line-input narrationInput"
-                                                    name="narration_text[]" style="display:none;" placeholder="Text...">
+                                                    name="narration_text[]" placeholder="Text...">
                                             </div>
                                         </td>
                                         <td><input type="text" name="reference_no[]" class="line-input"></td>
@@ -500,6 +505,36 @@
                     <button type="submit" class="btn-save"><i class="bi bi-save2"></i> Save Payment Voucher</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Quick Add Narration Modal -->
+    <div class="modal fade" id="quickNarrationModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-3 shadow border-0">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #18b870, #059e5a);">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle-fill"></i> Quick Add Narration</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="quickNarrationForm">
+                    @csrf
+                    <input type="hidden" name="expense_head" id="quick_expense_head" value="Payment voucher">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-secondary">Voucher Type</label>
+                            <input type="text" class="form-control bg-light border-0" value="Payment Voucher" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quick_narration" class="form-label fw-bold text-secondary">Narration / Description</label>
+                            <textarea class="form-control" name="narration" id="quick_narration" rows="3" required placeholder="Type narration text here..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-3 bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn text-white px-4 fw-bold" style="background: linear-gradient(135deg, #18b870, #059e5a);">Save Narration</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -557,12 +592,60 @@
         }
         $(document).on('input', '.amount', calcTotal);
 
+        let activeNarrationSelect = null;
+
+        $(document).on('click', '.btn-quick-narration', function() {
+            activeNarrationSelect = $(this).closest('td').find('.narrationSelect');
+            $('#quick_narration').val('');
+            $('#quickNarrationModal').modal('show');
+        });
+
+        $('#quickNarrationForm').on('submit', function(e) {
+            e.preventDefault();
+            let formData = $(this).serialize();
+            let saveBtn = $(this).find('button[type="submit"]');
+            saveBtn.prop('disabled', true).text('Saving...');
+            
+            $.ajax({
+                url: '{{ route('narrations.store') }}',
+                method: 'POST',
+                data: formData,
+                success: function(res) {
+                    saveBtn.prop('disabled', false).text('Save Narration');
+                    if (res.success) {
+                        $('.narrationSelect').each(function() {
+                            $(this).append(`<option value="${res.id}">${res.narration}</option>`);
+                        });
+                        if (activeNarrationSelect) {
+                            activeNarrationSelect.val(res.id).trigger('change');
+                        }
+                        $('#quickNarrationModal').modal('hide');
+                    } else {
+                        alert('Failed to save narration. Please try again.');
+                    }
+                },
+                error: function(xhr) {
+                    saveBtn.prop('disabled', false).text('Save Narration');
+                    alert('Something went wrong. Please check fields.');
+                }
+            });
+        });
+
         function newPayRow() {
-            return `<tr>
-            <td><div style="display:flex;gap:5px;">
-                <select name="narration_id[]" class="line-select narrationSelect"><option value="">Select/Add</option>@foreach ($narrations as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select>
-                <input type="text" class="line-input narrationInput" name="narration_text[]" style="display:none;" placeholder="Text...">
-            </div></td>
+            let row = `<tr>
+            <td>
+                <div style="display:flex;gap:5px;flex-direction:column;">
+                    <div style="display:flex;gap:5px;align-items:center;">
+                        <select name="narration_id[]" class="line-select narrationSelect" style="flex:1;">
+                            <!-- Options will be copied from first row -->
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-success btn-quick-narration" title="Quick Add Narration" style="padding: 2px 6px; border-radius: 4px; line-height: 1.2;">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                    <input type="text" class="line-input narrationInput" name="narration_text[]" placeholder="Text...">
+                </div>
+            </td>
             <td><input type="text" name="reference_no[]" class="line-input"></td>
             <td><select name="vendor_type[]" class="line-select rowType">
                 <option disabled selected>Select</option>
@@ -574,6 +657,10 @@
                 <input type="number" name="amount[]" class="line-input amount" placeholder="0.00" style="text-align:right;font-weight:700;"></td>
             <td><button type="button" class="btn-remove-row removeRow"><i class="bi bi-trash3"></i></button></td>
         </tr>`;
+            let $row = $(row);
+            let firstSelectOptions = $('#voucherTable tbody tr:first-child .narrationSelect').html();
+            $row.find('.narrationSelect').html(firstSelectOptions);
+            return $row;
         }
         $('#addNewRow').on('click', function() {
             $('#voucherTable tbody').append(newPayRow());

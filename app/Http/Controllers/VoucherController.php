@@ -1346,7 +1346,21 @@ class VoucherController extends Controller
                 'total_amount' => $request->total_amount,
             ];
 
-            // ExpenseVoucher::create($voucherData); // Disabled legacy duplicate
+            // Create legacy ExpenseVoucher record (powers the list view)
+            $savedExpense = ExpenseVoucher::create($voucherData);
+
+            // Also create a VoucherMaster record (V2 system)
+            $branchId = $this->getBranchId();
+            \App\Models\VoucherMaster::create([
+                'voucher_type' => 'expense',
+                'voucher_no'   => $evid,
+                'date'         => $request->entry_date ?? now()->toDateString(),
+                'status'       => 'posted',
+                'remarks'      => $request->remarks,
+                'total_amount' => $request->total_amount ?? 0,
+                'branch_id'    => $branchId,
+                'created_by'   => auth()->id(),
+            ]);
 
             $amount = (float) $request->total_amount;
 
@@ -1425,40 +1439,45 @@ class VoucherController extends Controller
 
     public function all_expense_vochers()
     {
-        $receipts = \App\Models\ExpenseVoucher::orderBy('id', 'DESC')->get();
+        $branchId = $this->getBranchId();
 
-        foreach ($receipts as $voucher) {
+        // ── Legacy ExpenseVoucher records ─────────────────────────────────────
+        $legacyRecords = \App\Models\ExpenseVoucher::orderBy('id', 'DESC')->get();
+
+        foreach ($legacyRecords as $voucher) {
             $partyName = '-';
             $typeLabel = '-';
 
-            // 🧩 If type is numeric → Account Head / Account
             if (is_numeric($voucher->type)) {
                 $accountHead = DB::table('account_heads')->where('id', $voucher->type)->first();
-                $account = DB::table('accounts')->where('id', $voucher->party_id)->first();
-
-                $typeLabel = $accountHead->name ?? 'Account';
-                $partyName = $account->title ?? '-';
+                $account     = DB::table('accounts')->where('id', $voucher->party_id)->first();
+                $typeLabel   = $accountHead->name ?? 'Account';
+                $partyName   = $account->title ?? '-';
             } elseif ($voucher->type === 'vendor') {
-                $vendor = DB::table('vendors')->where('id', $voucher->party_id)->first();
+                $vendor    = DB::table('vendors')->where('id', $voucher->party_id)->first();
                 $typeLabel = 'Vendor';
                 $partyName = $vendor->name ?? '-';
             } elseif ($voucher->type === 'customer') {
-                $customer = DB::table('customers')->where('id', $voucher->party_id)->first();
+                $customer  = DB::table('customers')->where('id', $voucher->party_id)->first();
                 $typeLabel = 'Customer';
                 $partyName = $customer->customer_name ?? '-';
             } elseif ($voucher->type === 'walkin') {
-                $walkin = DB::table('customers')
-                    ->where('id', $voucher->party_id)
-                    ->where('customer_type', 'Walking Customer')
-                    ->first();
+                $walkin    = DB::table('customers')->where('id', $voucher->party_id)
+                                ->where('customer_type', 'Walking Customer')->first();
                 $typeLabel = 'Walk-in';
                 $partyName = $walkin->customer_name ?? '-';
             }
 
-            // 🔗 Attach extra fields for Blade
-            $voucher->type_label = $typeLabel;
-            $voucher->party_name = $partyName;
+            $voucher->type_label  = $typeLabel;
+            $voucher->party_name  = $partyName;
+            // Normalize fields for blade
+            $voucher->evid        = $voucher->evid;
+            $voucher->entry_date  = $voucher->entry_date;
+            $voucher->total_amount= $voucher->total_amount;
+            $voucher->_source     = 'legacy';
         }
+
+        $receipts = $legacyRecords;
 
         return view('admin_panel.vochers.expense_vochers.all_expense_vochers', compact('receipts'));
     }
