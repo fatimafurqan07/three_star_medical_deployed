@@ -350,6 +350,13 @@
                 <div class="alert-success-erp"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
             @endif
 
+            @if (session('error'))
+                <div class="alert-danger-erp" style="background:#fff0f0;border:1.5px solid #f87171;border-radius:10px;padding:14px 18px;margin-bottom:16px;color:#b91c1c;display:flex;align-items:center;gap:10px;font-weight:500;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size:1.2rem;"></i>
+                    <span>{{ session('error') }}</span>
+                </div>
+            @endif
+
             <form action="{{ route('store_rec_vochers') }}" method="POST">
                 @csrf
 

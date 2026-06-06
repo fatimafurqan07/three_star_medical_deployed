@@ -559,11 +559,11 @@ class BalanceService
     }
 
     /**
-     * Get Accounts Receivable account ID
+     * Get Accounts Receivable account ID.
+     * Auto-creates COA if missing. Returns null if still unavailable.
      */
-    public function getAccountsReceivableId(?int $branchId = null): int
+    public function getAccountsReceivableId(?int $branchId = null): ?int
     {
-
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
         }
@@ -576,15 +576,26 @@ class BalanceService
             })
             ->first();
 
-        return $account->id;
+        if (! $account) {
+            // Auto-create COA and try again
+            $this->ensureDefaultCOA($branchId);
+            $account = Account::where('branch_id', $branchId)
+                ->where(function ($q) {
+                    $q->where('title', 'like', '%Receivable%')
+                        ->orWhere('account_code', 'AR');
+                })
+                ->first();
+        }
+
+        return $account?->id;
     }
 
     /**
-     * Get Sales Revenue account ID
+     * Get Sales Revenue account ID.
+     * Auto-creates COA if missing. Returns null if still unavailable.
      */
-    public function getSalesRevenueId(?int $branchId = null): int
+    public function getSalesRevenueId(?int $branchId = null): ?int
     {
-
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
         }
@@ -597,15 +608,25 @@ class BalanceService
             })
             ->first();
 
-        return $account->id;
+        if (! $account) {
+            $this->ensureDefaultCOA($branchId);
+            $account = Account::where('branch_id', $branchId)
+                ->where(function ($q) {
+                    $q->where('account_code', 'SALES')
+                        ->orWhere('title', 'like', '%Sales%');
+                })
+                ->first();
+        }
+
+        return $account?->id;
     }
 
     /**
-     * Get Cash account ID
+     * Get Cash account ID.
+     * Auto-creates COA if missing. Returns null if still unavailable.
      */
-    public function getCashAccountId(?int $branchId = null): int
+    public function getCashAccountId(?int $branchId = null): ?int
     {
-
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
         }
@@ -618,15 +639,25 @@ class BalanceService
             })
             ->first();
 
-        return $account->id;
+        if (! $account) {
+            $this->ensureDefaultCOA($branchId);
+            $account = Account::where('branch_id', $branchId)
+                ->where(function ($q) {
+                    $q->where('title', 'like', '%Cash%')
+                        ->orWhere('account_code', 'CASH');
+                })
+                ->first();
+        }
+
+        return $account?->id;
     }
 
     /**
-     * Get Accounts Payable account ID (Liability)
+     * Get Accounts Payable account ID (Liability).
+     * Auto-creates COA if missing. Returns null if still unavailable.
      */
-    public function getAccountsPayableId(?int $branchId = null): int
+    public function getAccountsPayableId(?int $branchId = null): ?int
     {
-
         if ($branchId === null && auth()->check()) {
             $branchId = auth()->user()->getBranchId();
         }
@@ -639,7 +670,17 @@ class BalanceService
             })
             ->first();
 
-        return $account->id;
+        if (! $account) {
+            $this->ensureDefaultCOA($branchId);
+            $account = Account::where('branch_id', $branchId)
+                ->where(function ($q) {
+                    $q->where('title', 'like', '%Payable%')
+                        ->orWhere('account_code', 'AP');
+                })
+                ->first();
+        }
+
+        return $account?->id;
     }
 
     /**

@@ -410,7 +410,7 @@ class VoucherController extends Controller
             $rvid = $request->rvid ?: \App\Models\ReceiptsVoucher::generateRVID(auth()->id());
             $narrationIds = [];
 
-            foreach ($request->narration_id as $index => $narrId) {
+            foreach ($request->narration_id ?? [] as $index => $narrId) {
                 $manualText = $request->narration_text[$index] ?? null;
                 $manualType = $request->narration_type_text[$index] ?? 'Manual';
 
@@ -432,261 +432,238 @@ class VoucherController extends Controller
                 }
             }
 
-            $voucherData = [
-                'rvid' => $rvid,
-                'receipt_date' => $request->receipt_date,
-                'entry_date' => $request->entry_date,
-                'type' => $request->vendor_type,
-                'party_id' => $request->vendor_id,
-                'tel' => $request->tel,
-                'remarks' => ($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher #$rvid",
+            // ─── Validate required fields before any DB writes ────────────────
+            if (empty($request->vendor_type)) {
+                throw new \Exception('Party Type (Customer/Vendor) is required.');
+            }
+            if (empty($request->vendor_id)) {
+                throw new \Exception('Please select a Party (Customer/Vendor/Account).');
+            }
+            if (empty($request->receipt_date)) {
+                throw new \Exception('Receipt Date is required.');
+            }
+            $totalAmt = (float) $request->total_amount;
+            if ($totalAmt <= 0) {
+                throw new \Exception('Total amount must be greater than zero.');
+            }
+            $filledAccounts = array_filter($request->row_account_id ?? [], fn($v) => !empty($v));
+            if (empty($filledAccounts)) {
+                throw new \Exception('At least one debit account (Cash/Bank) must be selected.');
+            }
 
-                'narration_id' => json_encode($narrationIds),
-                'reference_no' => json_encode($request->reference_no),
-                'row_account_head' => json_encode($request->row_account_head),
-                'row_account_id' => json_encode($request->row_account_id),
-                'discount_value' => json_encode($request->discount_value),
-                // 'kg'               => json_encode($request->kg),
-                'rate' => json_encode($request->rate),
-                'amount' => json_encode($request->amount),
-                'total_amount' => $request->total_amount,
-                'processed' => true,
+            // ✅ V2 VOUCHER INTEGRATION (Primary Logic Now)
+            // No inner try-catch — any failure rolls back the full transaction cleanly.
+            \Log::info('V2 Integration Start. Type: '.$request->vendor_type.', ID: '.$request->vendor_id);
+
+            $vType      = strtolower($request->vendor_type);
+            $partyType  = null;
+            $balanceService = app(\App\Services\BalanceService::class);
+
+            if ($vType == 'customer' || $vType == 'walkin') {
+                $partyType      = \App\Models\Customer::class;
+                $creditAccountId = $balanceService->getAccountsReceivableId();
+            } elseif ($vType == 'vendor') {
+                $partyType      = \App\Models\Vendor::class;
+                $creditAccountId = $balanceService->getAccountsPayableId();
+            } else {
+                $partyType      = \App\Models\Account::class;
+                $creditAccountId = (int) $request->vendor_id;
+            }
+
+            if (empty($creditAccountId)) {
+                throw new \Exception("Could not find the required Chart of Accounts entry for type '{$vType}'. Please run Chart of Accounts Setup from the Accounts menu first.");
+            }
+
+            $v2Lines           = [];
+            $firstTargetBankId = null;
+            $chequeInHandId    = null;
+
+            if ($request->payment_mode === 'cheque') {
+                $chequeInHand   = \App\Models\Account::where('title', 'Cheque In Hand')->first();
+                $chequeInHandId = $chequeInHand?->id;
+            }
+
+            // DEBIT SIDE (Cash/Bank/Cheque) - From Row Inputs
+            foreach ($request->row_account_id as $idx => $accId) {
+                if (empty($accId)) continue;
+                $amt = (float) ($request->amount[$idx] ?? 0);
+                if ($amt <= 0) continue;
+
+                if ($request->payment_mode === 'cheque' && $chequeInHandId) {
+                    if (! $firstTargetBankId) $firstTargetBankId = $accId;
+                    $v2Lines[] = [
+                        'account_id' => $chequeInHandId,
+                        'debit'      => $amt,
+                        'credit'     => 0,
+                        'narration'  => $request->narration_text[$idx] ?? 'Cheque Receipt (' . $request->cheque_no . ')',
+                    ];
+                } else {
+                    $v2Lines[] = [
+                        'account_id' => $accId,
+                        'debit'      => $amt,
+                        'credit'     => 0,
+                        'narration'  => $request->narration_text[$idx] ?? 'Receipt',
+                    ];
+                }
+            }
+
+            // CREDIT SIDE (Accounts Receivable / Payable) - Total Amount
+            $v2Lines[] = [
+                'account_id' => $creditAccountId,
+                'debit'      => 0,
+                'credit'     => $totalAmt,
+                'narration'  => 'Receipt from '.$request->vendor_type,
             ];
 
-            // $rec = ReceiptsVoucher::create($voucherData); // Disabled legacy duplicate
-            // ✅ V2 VOUCHER INTEGRATION (Primary Logic Now)
-            try {
-                \Log::info('V2 Integration Start. Type: '.$request->vendor_type.', ID: '.$request->vendor_id);
+            if (count($v2Lines) < 2) {
+                throw new \Exception('No valid journal lines were generated. Please check the amounts entered.');
+            }
 
-                $vType = strtolower($request->vendor_type);
-                $partyType = null;
-                $creditAccountId = null;
-                $balanceService = app(\App\Services\BalanceService::class);
+            $createdVoucher = app(\App\Services\VoucherService::class)->createVoucher([
+                'voucher_type' => 'receipt',
+                'date'         => $request->receipt_date,
+                'status'       => 'posted',
+                'party_type'   => $partyType,
+                'party_id'     => $request->vendor_id,
+                'remarks'      => (($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher") . " (Ref: $rvid)",
+            ], $v2Lines, auth()->id());
 
-                if ($vType == 'customer' || $vType == 'walkin') {
-                    $partyType = \App\Models\Customer::class;
-                    $creditAccountId = $balanceService->getAccountsReceivableId();
-                } elseif ($vType == 'vendor') {
-                    $partyType = \App\Models\Vendor::class;
-                    $creditAccountId = $balanceService->getAccountsPayableId();
+            if ($request->payment_mode === 'cheque' && $firstTargetBankId) {
+                \App\Models\Cheque::create([
+                    'voucher_master_id' => $createdVoucher->id,
+                    'cheque_no'         => $request->cheque_no,
+                    'cheque_date'       => $request->cheque_date,
+                    'bank_name'         => $request->bank_name,
+                    'status'            => 'pending',
+                    'amount'            => $totalAmt,
+                    'actual_account_id' => $firstTargetBankId,
+                ]);
+            }
+
+            \Log::info('V2 Voucher Created Successfully. Voucher ID: '.$createdVoucher->id);
+
+            // 🚀 Customer Payment Allocation
+            if (($vType == 'customer' || $vType == 'walkin') && $totalAmt > 0) {
+
+                if ($request->sale_id) {
+                    \App\Models\CustomerPayment::create([
+                        'customer_id'      => $request->vendor_id,
+                        'sale_id'          => $request->sale_id,
+                        'admin_or_user_id' => auth()->id() ?? 1,
+                        'amount'           => $totalAmt,
+                        'payment_method'   => 'Manual Voucher',
+                        'payment_date'     => $request->receipt_date,
+                        'note'             => ($request->remarks && strtolower($request->remarks) !== 'active' ? $request->remarks : "Manual Receipt Voucher #$rvid") . " linked to Sale #".$request->sale_id,
+                    ]);
                 } else {
-                    $partyType = \App\Models\Account::class;
-                    $creditAccountId = $request->vendor_id;
-                }
+                    // Auto-allocate to unpaid sales (oldest first)
+                    $unpaidSales = \App\Models\Sale::where('customer_id', $request->vendor_id)
+                        ->where('total_net', '>', 0)
+                        ->whereIn('sale_status', ['post', 'returned'])
+                        ->orderBy('id', 'asc')
+                        ->get();
 
-                if ($creditAccountId) {
-                    $v2Lines = [];
-                    $totalAmt = (float) $request->total_amount;
-                    $firstTargetBankId = null;
-                    
-                    $chequeInHandId = null;
-                    if ($request->payment_mode === 'cheque') {
-                        $chequeInHand = \App\Models\Account::where('title', 'Cheque In Hand')->first();
-                        $chequeInHandId = $chequeInHand ? $chequeInHand->id : null;
-                    }
+                    $remainingToAllocate = $totalAmt;
+                    foreach ($unpaidSales as $sale) {
+                        if ($remainingToAllocate <= 0) break;
 
-                    // DEBIT SIDE (Cash/Bank/Cheque) - From Row Inputs
-                    if ($request->row_account_id && $request->amount) {
-                        foreach ($request->row_account_id as $idx => $accId) {
-                            $amt = (float) ($request->amount[$idx] ?? 0);
-                            if ($amt > 0) {
-                                if ($request->payment_mode === 'cheque' && $chequeInHandId) {
-                                    if (!$firstTargetBankId) $firstTargetBankId = $accId;
-                                    $v2Lines[] = [
-                                        'account_id' => $chequeInHandId,
-                                        'debit' => $amt,
-                                        'credit' => 0,
-                                        'narration' => $request->narration_text[$idx] ?? 'Cheque Receipt (' . $request->cheque_no . ')',
-                                    ];
-                                } else {
-                                    $v2Lines[] = [
-                                        'account_id' => $accId,
-                                        'debit' => $amt,
-                                        'credit' => 0,
-                                        'narration' => $request->narration_text[$idx] ?? 'Receipt',
-                                    ];
-                                }
-                            }
-                        }
-                    }
+                        $totalPaid     = \App\Models\CustomerPayment::where('sale_id', $sale->id)->sum('amount');
+                        $totalReturned = \App\Models\SaleReturn::where('sale_id', $sale->id)->sum('net_amount');
+                        $updatedNet    = max(0, $sale->total_net - $totalReturned);
+                        $actualDue     = max(0, $updatedNet - $totalPaid);
 
-                    // CREDIT SIDE (Customer/AR) - Total Amount
-                    if ($totalAmt > 0) {
-                        $v2Lines[] = [
-                            'account_id' => $creditAccountId,
-                            'debit' => 0,
-                            'credit' => $totalAmt,
-                            'narration' => 'Receipt from '.$request->vendor_type,
-                        ];
-                    }
-
-                    if (! empty($v2Lines)) {
-                        $createdVoucher = app(\App\Services\VoucherService::class)->createVoucher([
-                            'voucher_type' => 'receipt',
-                            'date' => $request->receipt_date,
-                            'status' => 'posted',
-                            'party_type' => $partyType,
-                            'party_id' => $request->vendor_id,
-                            'remarks' => (($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher") . " (Ref: $rvid)",
-                        ], $v2Lines, auth()->id());
-
-                        if ($request->payment_mode === 'cheque' && $firstTargetBankId) {
-                            \App\Models\Cheque::create([
-                                'voucher_master_id' => $createdVoucher->id,
-                                'cheque_no' => $request->cheque_no,
-                                'cheque_date' => $request->cheque_date,
-                                'bank_name' => $request->bank_name,
-                                'status' => 'pending',
-                                'amount' => $totalAmt,
-                                'actual_account_id' => $firstTargetBankId
-                            ]);
-                        }
-
-                        \Log::info('V2 Voucher Created Successfully.');
-                    } else {
-                        \Log::warning('V2 Lines Empty. Total Amt: '.$totalAmt);
-                    }
-                } else {
-                    \Log::warning("Credit Account ID missing for type: $vType");
-                }
-                
-                // 🚀 Commission Integration: Create Customer Payment if party is Customer
-                if (($vType == 'customer' || $vType == 'walkin') && $totalAmt > 0) {
-                    
-                    if ($request->sale_id) {
-                        // Manual explicit link
-                        \App\Models\CustomerPayment::create([
-                            'customer_id'      => $request->vendor_id,
-                            'sale_id'          => $request->sale_id,
-                            'admin_or_user_id' => auth()->id() ?? 1,
-                            'amount'           => $totalAmt,
-                            'payment_method'   => 'Manual Voucher',
-                            'payment_date'     => $request->receipt_date,
-                            'note'             => ($request->remarks && strtolower($request->remarks) !== 'active' ? $request->remarks : "Manual Receipt Voucher #$rvid") . " linked to Sale #".$request->sale_id,
-                        ]);
-                        
-                        $sale = \App\Models\Sale::find($request->sale_id);
-                        if ($sale) {
-                            // Paid amount and due amount are dynamically calculated in the system,
-                            // no direct DB columns to update here.
-                        }
-                    } else {
-                        // Auto-allocate to unpaid sales
-                        $unpaidSales = \App\Models\Sale::where('customer_id', $request->vendor_id)
-                            ->where('total_net', '>', 0)
-                            ->whereIn('sale_status', ['post', 'returned'])
-                            ->orderBy('id', 'asc')
-                            ->get();
-
-                        $remainingToAllocate = $totalAmt;
-                        foreach ($unpaidSales as $sale) {
-                            if ($remainingToAllocate <= 0) break;
-
-                            $totalPaid = \App\Models\CustomerPayment::where('sale_id', $sale->id)->sum('amount');
-                            $totalReturned = \App\Models\SaleReturn::where('sale_id', $sale->id)->sum('net_amount');
-                            $updatedNet = max(0, $sale->total_net - $totalReturned);
-                            $actualDue = max(0, $updatedNet - $totalPaid);
-
-                            if ($actualDue > 0) {
-                                $allocate = min($actualDue, $remainingToAllocate);
-                                \App\Models\CustomerPayment::create([
-                                    'customer_id'      => $request->vendor_id,
-                                    'sale_id'          => $sale->id,
-                                    'admin_or_user_id' => auth()->id() ?? 1,
-                                    'amount'           => $allocate,
-                                    'payment_method'   => 'Manual Voucher',
-                                    'payment_date'     => $request->receipt_date,
-                                    'note'             => "Auto-allocated via Receipt Voucher #$rvid",
-                                ]);
-                                
-                                // Paid amount and due amount are dynamically calculated in the system,
-                                // no direct DB columns to update here.
-
-                                $remainingToAllocate -= $allocate;
-                            }
-                        }
-
-                        // Any unallocated amount becomes advance
-                        if ($remainingToAllocate > 0) {
+                        if ($actualDue > 0) {
+                            $allocate = min($actualDue, $remainingToAllocate);
                             \App\Models\CustomerPayment::create([
                                 'customer_id'      => $request->vendor_id,
-                                'sale_id'          => null,
+                                'sale_id'          => $sale->id,
                                 'admin_or_user_id' => auth()->id() ?? 1,
-                                'amount'           => $remainingToAllocate,
+                                'amount'           => $allocate,
                                 'payment_method'   => 'Manual Voucher',
                                 'payment_date'     => $request->receipt_date,
-                                'note'             => "Advance via Receipt Voucher #$rvid",
+                                'note'             => "Auto-allocated via Receipt Voucher #$rvid",
                             ]);
+                            $remainingToAllocate -= $allocate;
                         }
                     }
 
-                    // 📘 Legacy Ledger Sync: Customer
-                    $latestLedger = \App\Models\CustomerLedger::where('customer_id', $request->vendor_id)->latest()->first();
-                    if ($latestLedger) {
-                        $prevBal = $latestLedger->closing_balance;
-                    } else {
-                        $cust = \App\Models\Customer::find($request->vendor_id);
-                        $prevBal = $cust->opening_balance ?? 0;
-                    }
-                    $newBal = $prevBal - $totalAmt; // Receipt reduces customer debt
-
-                    \App\Models\CustomerLedger::create([
-                        'customer_id' => $request->vendor_id,
-                        'branch_id' => $this->getBranchId() ?? 1,
-                        'admin_or_user_id' => auth()->id() ?? 1,
-                        'description' => ($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher #$rvid",
-                        'previous_balance' => $prevBal,
-                        'closing_balance' => $newBal,
-                        'opening_balance' => 0,
-                        'source_type' => \App\Models\VoucherMaster::class,
-                        'source_id' => $createdVoucher->id ?? null,
-                        'created_at' => $request->receipt_date ? \Carbon\Carbon::parse($request->receipt_date)->setHour(now()->hour)->setMinute(now()->minute) : now(),
-                    ]);
-
-                    // Update Customer Master
-                    $cust = \App\Models\Customer::find($request->vendor_id);
-                    if ($cust) {
-                        $cust->previous_balance = $newBal;
-                        $cust->save();
+                    // Unallocated amount becomes advance payment
+                    if ($remainingToAllocate > 0) {
+                        \App\Models\CustomerPayment::create([
+                            'customer_id'      => $request->vendor_id,
+                            'sale_id'          => null,
+                            'admin_or_user_id' => auth()->id() ?? 1,
+                            'amount'           => $remainingToAllocate,
+                            'payment_method'   => 'Manual Voucher',
+                            'payment_date'     => $request->receipt_date,
+                            'note'             => "Advance via Receipt Voucher #$rvid",
+                        ]);
                     }
                 }
 
-                // 📘 Legacy Ledger Sync: Vendor (Refund/Receipt from Vendor)
-                if ($vType == 'vendor' && $totalAmt > 0) {
-                    $latestLedger = \App\Models\VendorLedger::where('vendor_id', $request->vendor_id)->latest()->first();
-                    $prevBal = $latestLedger ? $latestLedger->closing_balance : 0;
-                    $newBal = $prevBal - $totalAmt; // Receipt from vendor reduces our payable
+                // 📘 Legacy Ledger Sync: Customer
+                $latestLedger = \App\Models\CustomerLedger::where('customer_id', $request->vendor_id)->latest()->first();
+                $prevBal      = $latestLedger
+                    ? $latestLedger->closing_balance
+                    : (\App\Models\Customer::find($request->vendor_id)?->opening_balance ?? 0);
+                $newBal = $prevBal - $totalAmt;
 
-                    \App\Models\VendorLedger::create([
-                        'vendor_id' => $request->vendor_id,
-                        'branch_id' => $this->getBranchId() ?? 1,
-                        'admin_or_user_id' => auth()->id() ?? 1,
-                        'date' => now(),
-                        'description' => ($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher #$rvid",
-                        'opening_balance' => 0,
-                        'debit' => 0,
-                        'credit' => $totalAmt,
-                        'previous_balance' => $prevBal,
-                        'closing_balance' => $newBal,
-                        'source_type' => \App\Models\VoucherMaster::class,
-                        'source_id' => $createdVoucher->id ?? null,
-                    ]);
+                \App\Models\CustomerLedger::create([
+                    'customer_id'      => $request->vendor_id,
+                    'branch_id'        => $this->getBranchId() ?? 1,
+                    'admin_or_user_id' => auth()->id() ?? 1,
+                    'description'      => ($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher #$rvid",
+                    'previous_balance' => $prevBal,
+                    'closing_balance'  => $newBal,
+                    'opening_balance'  => 0,
+                    'source_type'      => \App\Models\VoucherMaster::class,
+                    'source_id'        => $createdVoucher->id,
+                    'created_at'       => $request->receipt_date
+                        ? \Carbon\Carbon::parse($request->receipt_date)->setHour(now()->hour)->setMinute(now()->minute)
+                        : now(),
+                ]);
+
+                // Update Customer Master closing balance
+                $cust = \App\Models\Customer::find($request->vendor_id);
+                if ($cust) {
+                    $cust->previous_balance = $newBal;
+                    $cust->save();
                 }
+            }
 
-            } catch (\Exception $e) {
-                \Log::error('V2 Sync Error: '.$e->getMessage());
-                // Silently fail or return error message if preferred, but usually we log.
+            // 📘 Legacy Ledger Sync: Vendor (Receipt from Vendor reduces our payable)
+            if ($vType == 'vendor' && $totalAmt > 0) {
+                $latestLedger = \App\Models\VendorLedger::where('vendor_id', $request->vendor_id)->latest()->first();
+                $prevBal      = $latestLedger ? $latestLedger->closing_balance : 0;
+                $newBal       = $prevBal - $totalAmt;
+
+                \App\Models\VendorLedger::create([
+                    'vendor_id'        => $request->vendor_id,
+                    'branch_id'        => $this->getBranchId() ?? 1,
+                    'admin_or_user_id' => auth()->id() ?? 1,
+                    'date'             => now(),
+                    'description'      => ($request->remarks && strtolower($request->remarks) !== 'active') ? $request->remarks : "Manual Receipt Voucher #$rvid",
+                    'opening_balance'  => 0,
+                    'debit'            => 0,
+                    'credit'           => $totalAmt,
+                    'previous_balance' => $prevBal,
+                    'closing_balance'  => $newBal,
+                    'source_type'      => \App\Models\VoucherMaster::class,
+                    'source_id'        => $createdVoucher->id,
+                ]);
             }
 
             DB::commit();
 
             return back()->with('success', 'Receipt Voucher saved successfully!');
+
         } catch (\Exception $e) {
             DB::rollBack();
-
-            return back()->with('error', $e->getMessage());
+            \Log::error('Receipt Voucher Save Error: '.$e->getMessage().' | Line: '.$e->getLine().' | File: '.basename($e->getFile()));
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
+
 
     public function Payment_vochers()
     {
