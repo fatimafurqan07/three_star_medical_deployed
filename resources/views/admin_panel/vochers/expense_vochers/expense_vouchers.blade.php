@@ -356,6 +356,13 @@
                 <div class="alert-success-erp"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
             @endif
 
+            @if (session('error'))
+                <div class="alert-danger-erp" style="background:#fff0f0;border:1.5px solid #f87171;border-radius:10px;padding:14px 18px;margin-bottom:16px;color:#b91c1c;display:flex;align-items:center;gap:10px;font-weight:500;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size:1.2rem;"></i>
+                    <span>{{ session('error') }}</span>
+                </div>
+            @endif
+
             <form action="{{ route('store_expense_vochers') }}" method="POST">
                 @csrf
 
@@ -441,6 +448,9 @@
                                             <select name="row_account_id[]" class="line-select rowAccountSub">
                                                 <option value="">Select Expense Account</option>
                                             </select>
+                                            <div class="row-balance-display" style="display:none; font-size:.78rem; color:#ef6c00; margin-top:4px; font-weight:700;">
+                                                <i class="bi bi-wallet2"></i> Balance: Rs. <span class="rowBalanceVal">0.00</span>
+                                            </div>
                                         </td>
                                          <td>
                                              <div style="display:flex;gap:5px;align-items:center;">
@@ -566,7 +576,9 @@
         });
         $(document).on('change', '.rowAccountHead', function() {
             let headId = $(this).val();
-            let $sub = $(this).closest('tr').find('.rowAccountSub');
+            let $row = $(this).closest('tr');
+            let $sub = $row.find('.rowAccountSub');
+            $row.find('.row-balance-display').hide();
             if (!headId) {
                 $sub.html('<option value="">Select Account</option>');
                 return;
@@ -574,10 +586,22 @@
             $.get('{{ url('get-accounts-by-head') }}/' + headId, function(res) {
                 let html = '<option value="">Select Account</option>';
                 res.forEach(acc => {
-                    html += `<option value="${acc.id}">${acc.title}</option>`;
+                    html += `<option value="${acc.id}" data-bal="${acc.opening_balance}">${acc.title}</option>`;
                 });
                 $sub.html(html);
             });
+        });
+
+        $(document).on('change', '.rowAccountSub', function() {
+            let $row = $(this).closest('tr');
+            let bal = $(this).find(':selected').data('bal');
+            let $balDiv = $row.find('.row-balance-display');
+            if (bal !== undefined && bal !== null && $(this).val() !== '') {
+                $balDiv.find('.rowBalanceVal').text(parseFloat(bal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $balDiv.show();
+            } else {
+                $balDiv.hide();
+            }
         });
 
         function calcTotal() {
@@ -648,6 +672,9 @@
                 <select name="row_account_id[]" class="line-select rowAccountSub">
                     <option value="">Select Expense Account</option>
                 </select>
+                <div class="row-balance-display" style="display:none; font-size:.78rem; color:#ef6c00; margin-top:4px; font-weight:700;">
+                    <i class="bi bi-wallet2"></i> Balance: Rs. <span class="rowBalanceVal">0.00</span>
+                </div>
             </td>
             <td>
                 <div style="display:flex;gap:5px;align-items:center;">

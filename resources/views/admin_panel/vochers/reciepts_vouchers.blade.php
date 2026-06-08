@@ -514,6 +514,9 @@
                                             <select name="row_account_id[]" class="line-select rowAccountSub">
                                                 <option disabled selected>Select Account</option>
                                             </select>
+                                            <div class="row-balance-display" style="display:none; font-size:.78rem; color:#4f6ef7; margin-top:4px; font-weight:700;">
+                                                <i class="bi bi-wallet2"></i> Balance: Rs. <span class="rowBalanceVal">0.00</span>
+                                            </div>
                                         </td>
                                         <td>
                                             <input type="hidden" name="discount_value[]" value="0">
@@ -640,7 +643,9 @@
         });
         $(document).on('change', '.rowAccountHead', function() {
             let headId = $(this).val(),
-                $sub = $(this).closest('tr').find('.rowAccountSub');
+                $row = $(this).closest('tr'),
+                $sub = $row.find('.rowAccountSub');
+            $row.find('.row-balance-display').hide();
             if (!headId) {
                 $sub.html('<option value="">Select Account</option>');
                 return;
@@ -648,10 +653,22 @@
             $.get('{{ url('get-accounts-by-head') }}/' + headId, function(res) {
                 let html = '<option value="">Select Account</option>';
                 res.forEach(acc => {
-                    html += `<option value="${acc.id}">${acc.title}</option>`;
+                    html += `<option value="${acc.id}" data-bal="${acc.opening_balance}">${acc.title}</option>`;
                 });
                 $sub.html(html);
             });
+        });
+
+        $(document).on('change', '.rowAccountSub', function() {
+            let $row = $(this).closest('tr');
+            let bal = $(this).find(':selected').data('bal');
+            let $balDiv = $row.find('.row-balance-display');
+            if (bal !== undefined && bal !== null && $(this).val() !== '') {
+                $balDiv.find('.rowBalanceVal').text(parseFloat(bal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $balDiv.show();
+            } else {
+                $balDiv.hide();
+            }
         });
         $(document).on('change', '.narrationSelect', function() {
             let $input = $(this).closest('td').find('.narrationInput');
@@ -723,7 +740,11 @@
             </td>
             <td><input type="text" name="reference_no[]" class="line-input"></td>
             <td><select name="row_account_head[]" class="line-select rowAccountHead"><option value="">Select Head</option>@foreach ($AccountHeads as $head)<option value="{{ $head->id }}">{{ $head->name }}</option>@endforeach</select></td>
-            <td><select name="row_account_id[]" class="line-select rowAccountSub"><option disabled selected>Select Account</option></select></td>
+            <td><select name="row_account_id[]" class="line-select rowAccountSub"><option disabled selected>Select Account</option></select>
+                <div class="row-balance-display" style="display:none; font-size:.78rem; color:#4f6ef7; margin-top:4px; font-weight:700;">
+                    <i class="bi bi-wallet2"></i> Balance: Rs. <span class="rowBalanceVal">0.00</span>
+                </div>
+            </td>
             <td><input type="hidden" name="discount_value[]" value="0"><input type="hidden" name="rate[]" value="0"><input type="number" name="amount[]" class="line-input amount" placeholder="0.00" style="text-align:right;font-weight:700;"></td>
             <td><button type="button" class="btn-remove-row removeRow"><i class="bi bi-trash3"></i></button></td>
         </tr>`;

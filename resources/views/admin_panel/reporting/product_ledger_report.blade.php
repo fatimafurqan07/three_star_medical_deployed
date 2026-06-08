@@ -147,11 +147,11 @@
 
     .filter-card .form-control,
     .filter-card .form-select {
-        border-radius: 8px;
-        border: 1.5px solid #e2e8f0;
-        font-size: .86rem;
-        padding: 7px 11px;
-        height: auto;
+        border-radius: 6px;
+        border: 1.2px solid #cbd5e1;
+        font-size: .8rem;
+        padding: 5px 8px;
+        height: 31px;
         transition: border-color .2s, box-shadow .2s;
     }
 
@@ -163,24 +163,40 @@
     }
 
     label.form-label {
-        font-size: .78rem;
+        font-size: .75rem;
         font-weight: 600;
         color: #374151;
         margin-bottom: 4px;
         display: block;
     }
 
+    /* Style Select2 inside filter card to be smaller */
+    .filter-card .select2-container .select2-selection--single {
+        height: 31px !important;
+        border-radius: 6px !important;
+        border: 1.2px solid #cbd5e1 !important;
+        font-size: .8rem !important;
+    }
+    .filter-card .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 29px !important;
+        padding-left: 8px !important;
+        color: #334155 !important;
+    }
+    .filter-card .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 29px !important;
+    }
+
     /* ── Buttons ─────────────────────────────────────────────────────────── */
     .btn-srp {
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-weight: 600;
-        font-size: .85rem;
-        padding: 8px 18px;
+        font-size: .8rem;
+        padding: 6px 12px;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
         transition: box-shadow .2s, transform .1s;
     }
 
@@ -514,8 +530,8 @@
     {{-- Filter Card --}}
     <div class="filter-card">
         <div class="filter-title"><i class="fas fa-filter"></i> Advanced Filters & Actions</div>
-        <div class="row g-3">
-            <!-- Unified Row 1: Product Attributes -->
+        <!-- Row 1: Product Attributes -->
+        <div class="row g-3 mb-3">
             <div class="col-md-3">
                 <label class="form-label">Category</label>
                 <select id="filterCategory" class="form-control select2-global">
@@ -559,9 +575,12 @@
                     @endforeach
                 </select>
             </div>
+        </div>
 
-            <!-- Unified Row 2: Parameters -->
-            <div class="col-md-2">
+        <!-- Row 2: Parameters & Action Buttons inline -->
+        <div class="d-flex flex-wrap align-items-end" style="gap: 10px !important;">
+            <!-- Warehouse -->
+            <div style="flex: 1 1 120px; max-width: 150px;">
                 <label class="form-label">Warehouse</label>
                 <select id="sel_warehouse" class="form-control select2-global">
                     <option value="">All Warehouses</option>
@@ -570,8 +589,9 @@
                     @endforeach
                 </select>
             </div>
+            <!-- Branch -->
             @if($isSuperAdmin)
-            <div class="col-md-2">
+            <div style="flex: 1 1 120px; max-width: 150px;">
                 <label class="form-label">Branch</label>
                 <select id="filterBranch" class="form-control select2-global">
                     <option value="all">— All Branches —</option>
@@ -581,15 +601,18 @@
                 </select>
             </div>
             @endif
-            <div class="col-md-2">
+            <!-- Start Date -->
+            <div style="flex: 1 1 110px; max-width: 135px;">
                 <label class="form-label">Start Date</label>
                 <input type="date" id="sel_start" class="form-control">
             </div>
-            <div class="col-md-2">
+            <!-- End Date -->
+            <div style="flex: 1 1 110px; max-width: 135px;">
                 <label class="form-label">End Date</label>
                 <input type="date" id="sel_end" class="form-control">
             </div>
-            <div class="col-md-2">
+            <!-- Status -->
+            <div style="flex: 1 1 110px; max-width: 130px;">
                 <label class="form-label">Status</label>
                 <select id="filterStatus" class="form-control">
                     <option value="all">All Status</option>
@@ -598,25 +621,25 @@
                     <option value="out_of_stock">❌ Out of Stock</option>
                 </select>
             </div>
-        </div>
-
-        <!-- Action buttons aligned on the bottom right -->
-        <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-3" style="border-top: 1px solid #e2e8f0;">
-            <button type="button" id="btnGenerate" class="btn-srp blue" title="Search Ledger">
-                <i class="fas fa-search me-1"></i> Search
-            </button>
-            <button type="button" id="btnReset" class="btn-srp ghost" title="Reset Filters">
-                <i class="fas fa-sync-alt me-1"></i> Reset
-            </button>
-            <button type="button" id="btnSummaryPdf" class="btn-srp green" title="Export Summary PDF">
-                <i class="fas fa-file-pdf me-1"></i> Summary PDF
-            </button>
-            <button type="button" id="btnPdf" class="btn-srp" style="background:#7c3aed;color:#fff;" title="Export Detail PDF">
-                <i class="fas fa-list-alt me-1"></i> Detail PDF
-            </button>
-            <button type="button" id="btnPrint" class="btn-srp purple" title="Print View">
-                <i class="fas fa-print me-1"></i> Print
-            </button>
+            
+            <!-- Actions -->
+            <div class="d-flex justify-content-end align-items-center flex-grow-1 ms-auto" style="min-width: 320px; gap: 15px !important;">
+                <button type="button" id="btnGenerate" class="btn-srp blue" title="Search Ledger">
+                    <i class="fas fa-search me-1"></i> Search
+                </button>
+                <button type="button" id="btnReset" class="btn-srp ghost" title="Reset Filters">
+                    <i class="fas fa-sync-alt me-1"></i> Reset
+                </button>
+                <button type="button" id="btnSummaryPdf" class="btn-srp green" title="Export Summary PDF">
+                    <i class="fas fa-file-pdf me-1"></i> Summary PDF
+                </button>
+                <button type="button" id="btnPdf" class="btn-srp" style="background:#7c3aed;color:#fff;" title="Export Detail PDF">
+                    <i class="fas fa-list-alt me-1"></i> Detail PDF
+                </button>
+                <button type="button" id="btnPrint" class="btn-srp purple" title="Print View">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
         </div>
     </div>
 

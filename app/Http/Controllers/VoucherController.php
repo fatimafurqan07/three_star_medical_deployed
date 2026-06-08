@@ -1343,6 +1343,7 @@ class VoucherController extends Controller
                 'party_id' => $request->vendor_id,
                 'tel' => $request->tel,
                 'remarks' => $request->remarks,
+                'reference_no' => json_encode([$request->ref_no_header]),
                 'narration_id' => json_encode($narrationIds),
                 'row_account_head' => json_encode($request->row_account_head),
                 'row_account_id' => json_encode($request->row_account_id),
@@ -1433,7 +1434,7 @@ class VoucherController extends Controller
 
             DB::commit();
 
-            return back()->with('success', 'Expense Voucher saved successfully!');
+            return redirect()->route('all_expense_vochers')->with('success', 'Expense Voucher saved successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -1474,6 +1475,21 @@ class VoucherController extends Controller
 
             $voucher->type_label  = $typeLabel;
             $voucher->party_name  = $partyName;
+
+            // Fetch line account heads
+            $lineHeads = json_decode($voucher->row_account_head, true);
+            $headNames = [];
+            if (is_array($lineHeads)) {
+                $lineHeads = array_filter($lineHeads);
+                if (!empty($lineHeads)) {
+                    $headNames = DB::table('account_heads')
+                        ->whereIn('id', $lineHeads)
+                        ->pluck('name')
+                        ->toArray();
+                }
+            }
+            $voucher->line_account_heads = !empty($headNames) ? implode(', ', array_unique($headNames)) : '-';
+
             // Normalize fields for blade
             $voucher->evid        = $voucher->evid;
             $voucher->entry_date  = $voucher->entry_date;
@@ -1482,8 +1498,9 @@ class VoucherController extends Controller
         }
 
         $receipts = $legacyRecords;
+        $allHeads = \App\Models\AccountHead::when($branchId, fn($q) => $q->where('branch_id', $branchId))->get();
 
-        return view('admin_panel.vochers.expense_vochers.all_expense_vochers', compact('receipts'));
+        return view('admin_panel.vochers.expense_vochers.all_expense_vochers', compact('receipts', 'allHeads'));
     }
 
     public function expenseprint($id)

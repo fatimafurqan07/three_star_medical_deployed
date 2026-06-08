@@ -473,9 +473,12 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <select name="vendor_id[]" class="line-select rowParty">
-                                                <option disabled selected>Select Party</option>
-                                            </select>
+                                             <select name="vendor_id[]" class="line-select rowParty">
+                                                 <option disabled selected>Select Party</option>
+                                             </select>
+                                             <div class="row-balance-display" style="display:none; font-size:.78rem; color:#18b870; margin-top:4px; font-weight:700;">
+                                                 <i class="bi bi-wallet2"></i> Balance: Rs. <span class="rowBalanceVal">0.00</span>
+                                             </div>
                                         </td>
                                         <td>
                                             <input type="hidden" name="discount_value[]" value="0">
@@ -582,16 +585,29 @@
                 $row = $(this).closest('tr'),
                 $sel = $row.find('.rowParty');
             $sel.html('<option disabled selected>Loading...</option>');
+            $row.find('.row-balance-display').hide();
             if (type === 'vendor' || type === 'customer' || type === 'walkin') {
                 $.get('{{ route('party.list') }}?type=' + type, function(data) {
                     $sel.empty().append('<option disabled selected>Select</option>');
-                    data.forEach(item => $sel.append(`<option value="${item.id}">${item.text}</option>`));
+                    data.forEach(item => $sel.append(`<option value="${item.id}" data-bal="${item.closing_balance}">${item.text}</option>`));
                 });
             } else if (type) {
                 $.get('{{ url('get-accounts-by-head') }}/' + type, function(data) {
                     $sel.empty().append('<option disabled selected>Select</option>');
-                    data.forEach(acc => $sel.append(`<option value="${acc.id}">${acc.title}</option>`));
+                    data.forEach(acc => $sel.append(`<option value="${acc.id}" data-bal="${acc.opening_balance}">${acc.title}</option>`));
                 });
+            }
+        });
+
+        $(document).on('change', '.rowParty', function() {
+            let $row = $(this).closest('tr');
+            let bal = $(this).find(':selected').data('bal');
+            let $balDiv = $row.find('.row-balance-display');
+            if (bal !== undefined && bal !== null && $(this).val() !== '') {
+                $balDiv.find('.rowBalanceVal').text(parseFloat(bal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $balDiv.show();
+            } else {
+                $balDiv.hide();
             }
         });
         $(document).on('change', '.narrationSelect', function() {
@@ -668,7 +684,11 @@
                 <option value="vendor">Vendor</option><option value="customer">Customer</option><option value="walkin">Walkin</option>
                 @foreach ($AccountHeads as $head)<option value="{{ $head->id }}">{{ $head->name }}</option>@endforeach
             </select></td>
-            <td><select name="vendor_id[]" class="line-select rowParty"><option disabled selected>Select Party</option></select></td>
+            <td><select name="vendor_id[]" class="line-select rowParty"><option disabled selected>Select Party</option></select>
+                <div class="row-balance-display" style="display:none; font-size:.78rem; color:#18b870; margin-top:4px; font-weight:700;">
+                    <i class="bi bi-wallet2"></i> Balance: Rs. <span class="rowBalanceVal">0.00</span>
+                </div>
+            </td>
             <td><input type="hidden" name="discount_value[]" value="0"><input type="hidden" name="rate[]" value="0">
                 <input type="number" name="amount[]" class="line-input amount" placeholder="0.00" style="text-align:right;font-weight:700;"></td>
             <td><button type="button" class="btn-remove-row removeRow"><i class="bi bi-trash3"></i></button></td>
