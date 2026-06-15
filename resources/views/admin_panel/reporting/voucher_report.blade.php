@@ -542,24 +542,20 @@
                 </div>
             </div>
 
-            {{-- Row 2: Customer / Vendor / Product --}}
+            {{-- Row 2: Party Type / Party Name / Product --}}
             <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
                 <div class="fg">
-                    <label>Customer</label>
-                    <select id="sel_customer" class="select2-filter">
-                        <option value="all">All Customers</option>
-                        @foreach ($customers as $c)
-                            <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
-                        @endforeach
+                    <label>Party Type</label>
+                    <select id="sel_party_type">
+                        <option value="all">All Parties</option>
+                        <option value="customer">Customer</option>
+                        <option value="vendor">Vendor</option>
                     </select>
                 </div>
                 <div class="fg">
-                    <label>Vendor</label>
-                    <select id="sel_vendor" class="select2-filter">
-                        <option value="all">All Vendors</option>
-                        @foreach ($vendors as $v)
-                            <option value="{{ $v->id }}">{{ $v->name }}</option>
-                        @endforeach
+                    <label id="lbl_party_name">Party Name</label>
+                    <select id="sel_party_name" class="select2-filter">
+                        <option value="all">-- Select Party Type First --</option>
                     </select>
                 </div>
                 <div class="fg">
@@ -572,6 +568,14 @@
                     </select>
                 </div>
             </div>
+
+            {{-- Hidden data for customers & vendors (JSON injected from server) --}}
+            <script id="customers-data" type="application/json">
+                {!! json_encode($customers->map(fn($c) => ['id' => $c->id, 'name' => $c->customer_name])) !!}
+            </script>
+            <script id="vendors-data" type="application/json">
+                {!! json_encode($vendors->map(fn($v) => ['id' => $v->id, 'name' => $v->name])) !!}
+            </script>
 
             {{-- Row 3: Type, Status, Branch & Generate --}}
             <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr auto;">
@@ -688,9 +692,51 @@
             document.getElementById('sel_start').value = firstOfMonth;
             document.getElementById('sel_end').value = today;
 
+            // ── Party Type / Party Name dynamic logic ──────────────────
+            const customersData = JSON.parse(document.getElementById('customers-data').textContent);
+            const vendorsData   = JSON.parse(document.getElementById('vendors-data').textContent);
+
+            function populatePartyName(type) {
+                const sel   = document.getElementById('sel_party_name');
+                const label = document.getElementById('lbl_party_name');
+
+                // Destroy existing Select2 before rebuilding options
+                if ($(sel).hasClass('select2-hidden-accessible')) {
+                    $(sel).select2('destroy');
+                }
+
+                sel.innerHTML = '';
+
+                if (type === 'customer') {
+                    label.textContent = 'Customer Name';
+                    sel.innerHTML = '<option value="all">All Customers</option>';
+                    customersData.forEach(c => {
+                        sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    });
+                } else if (type === 'vendor') {
+                    label.textContent = 'Vendor Name';
+                    sel.innerHTML = '<option value="all">All Vendors</option>';
+                    vendorsData.forEach(v => {
+                        sel.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    });
+                } else {
+                    label.textContent = 'Party Name';
+                    sel.innerHTML = '<option value="all">-- Select Party Type First --</option>';
+                }
+
+                // Re-init Select2
+                $(sel).select2({ width: '100%' });
+            }
+
+            document.getElementById('sel_party_type').addEventListener('change', function() {
+                populatePartyName(this.value);
+            });
+
             // Initialize Select2 dropdowns
             $(document).ready(function() {
                 $('.select2-filter').select2({ width: '100%' });
+                // Init party name as empty
+                populatePartyName('all');
             });
 
             // Date / Month / Year selection logic to keep inputs synchronized
@@ -731,11 +777,12 @@
                 document.getElementById('sel_year').value = 'all';
                 document.getElementById('sel_type').value = 'all';
                 document.getElementById('sel_status').value = 'all';
-                
-                $('#sel_customer').val('all').trigger('change');
-                $('#sel_vendor').val('all').trigger('change');
+
+                document.getElementById('sel_party_type').value = 'all';
+                populatePartyName('all');
+
                 $('#sel_product').val('all').trigger('change');
-                
+
                 document.getElementById('reportResult').style.display = 'none';
                 document.getElementById('exportBtns').style.display = 'none';
             });
@@ -743,32 +790,36 @@
             // Generate report
             let reportData = [];
             document.getElementById('btnGenerate').addEventListener('click', function() {
-                const start = document.getElementById('sel_start').value;
-                const end = document.getElementById('sel_end').value;
-                const month = document.getElementById('sel_month').value;
-                const year = document.getElementById('sel_year').value;
-                const customer = document.getElementById('sel_customer').value;
-                const vendor = document.getElementById('sel_vendor').value;
-                const product = document.getElementById('sel_product').value;
-                const type = document.getElementById('sel_type').value;
-                const status = document.getElementById('sel_status').value;
-                const branch = document.getElementById('sel_branch').value;
+                const start     = document.getElementById('sel_start').value;
+                const end       = document.getElementById('sel_end').value;
+                const month     = document.getElementById('sel_month').value;
+                const year      = document.getElementById('sel_year').value;
+                const product   = document.getElementById('sel_product').value;
+                const type      = document.getElementById('sel_type').value;
+                const status    = document.getElementById('sel_status').value;
+                const branch    = document.getElementById('sel_branch').value;
+
+                // Resolve customer_id / vendor_id from the combined party selector
+                const partyType = document.getElementById('sel_party_type').value;
+                const partyId   = document.getElementById('sel_party_name').value;
+                const customer  = (partyType === 'customer') ? partyId : 'all';
+                const vendor    = (partyType === 'vendor')   ? partyId : 'all';
 
                 document.getElementById('ledLoader').style.display = 'block';
                 document.getElementById('reportResult').style.display = 'none';
                 document.getElementById('exportBtns').style.display = 'none';
 
                 const params = new URLSearchParams({
-                    start_date: start,
-                    end_date: end,
-                    month: month,
-                    year: year,
-                    customer_id: customer,
-                    vendor_id: vendor,
-                    product_id: product,
+                    start_date:   start,
+                    end_date:     end,
+                    month:        month,
+                    year:         year,
+                    customer_id:  customer,
+                    vendor_id:    vendor,
+                    product_id:   product,
                     voucher_type: type,
-                    status: status,
-                    branch_id: branch
+                    status:       status,
+                    branch_id:    branch
                 });
 
                 fetch(`{{ route('report.voucher.fetch') }}?${params}`)
