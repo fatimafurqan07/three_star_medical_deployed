@@ -841,6 +841,8 @@
                                                     class="fa-solid fa-truck"></i> DC Report</a></li>
                                         <li><a href="{{ route('report.product.ledger') }}"><i
                                                     class="fa-solid fa-book-open"></i> Product Ledger</a></li>
+                                        <li><a href="{{ route('report.voucher') }}"><i
+                                                    class="fa-solid fa-file-invoice-dollar"></i> Voucher Report</a></li>
                                     </ul>
                                 </div>
                             @endcanany

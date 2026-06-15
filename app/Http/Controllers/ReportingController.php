@@ -3085,4 +3085,237 @@ class ReportingController extends Controller
         }
     }
 
+    public function voucher_report()
+    {
+        $branchId  = $this->getBranchId();
+
+        $customers = DB::table('customers')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->select('id', 'customer_name')
+            ->orderBy('customer_name')
+            ->get();
+
+        $vendors = DB::table('vendors')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        $products = DB::table('products')
+            ->select('id', 'item_code', 'item_name')
+            ->orderBy('item_name')
+            ->get();
+
+        $isSuperAdmin = $this->isSuperAdmin();
+        $branches    = $isSuperAdmin
+            ? DB::table('branches')->select('id', 'name')->orderBy('name')->get()
+            : collect();
+
+        return view('admin_panel.reporting.voucher_report',
+            compact('customers', 'vendors', 'products', 'isSuperAdmin', 'branches'));
+    }
+
+    public function fetchVoucherReport(Request $request)
+    {
+        try {
+            $startDate   = $request->get('start_date');
+            $endDate     = $request->get('end_date');
+            $month       = $request->get('month');
+            $year        = $request->get('year');
+            $customerId  = $request->get('customer_id');
+            $vendorId    = $request->get('vendor_id');
+            $productId    = $request->get('product_id');
+            $voucherType = $request->get('voucher_type');
+            $status      = $request->get('status');
+            $branchId    = $request->get('branch_id');
+
+            // Apply Branch Scoping
+            $sessionBranchId = $this->getBranchId();
+            if ($sessionBranchId) {
+                $branchId = $sessionBranchId;
+            }
+
+            $query = DB::table('voucher_masters');
+
+            // 1. Branch scoping
+            if ($branchId && $branchId !== 'all') {
+                $query->where('branch_id', $branchId);
+            }
+
+            // 2. Date/Month/Year filters
+            if ($startDate && $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate]);
+            } elseif ($month && $year && $month !== 'all' && $year !== 'all') {
+                $query->whereMonth('date', $month)->whereYear('date', $year);
+            } elseif ($year && $year !== 'all') {
+                $query->whereYear('date', $year);
+            }
+
+            // 3. Voucher Type filter
+            if ($voucherType && $voucherType !== 'all') {
+                $query->where('voucher_type', $voucherType);
+            }
+
+            // 4. Status filter
+            if ($status && $status !== 'all') {
+                $query->where('status', $status);
+            }
+
+            // 5. Customer filter
+            if ($customerId && $customerId !== 'all') {
+                $query->where('party_type', 'App\Models\Customer')
+                      ->where('party_id', $customerId);
+            }
+
+            // 6. Vendor filter
+            if ($vendorId && $vendorId !== 'all') {
+                $query->where('party_type', 'App\Models\Vendor')
+                      ->where('party_id', $vendorId);
+            }
+
+            // 7. Product filter
+            if ($productId && $productId !== 'all') {
+                // Get all sale invoices containing the product
+                $sales = DB::table('sale_items')
+                    ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                    ->where('sale_items.product_id', $productId)
+                    ->select('sales.invoice_no', 'sales.customer_id')
+                    ->get();
+                $saleInvoices = $sales->pluck('invoice_no')->filter()->unique()->toArray();
+                $customerIds = $sales->pluck('customer_id')->filter()->unique()->toArray();
+
+                // Get all purchase invoices containing the product
+                $purchases = DB::table('purchase_items')
+                    ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                    ->where('purchase_items.product_id', $productId)
+                    ->select('purchases.invoice_no', 'purchases.vendor_id')
+                    ->get();
+                $purchaseInvoices = $purchases->pluck('invoice_no')->filter()->unique()->toArray();
+                $vendorIds = $purchases->pluck('vendor_id')->filter()->unique()->toArray();
+
+                $allInvoices = array_merge($saleInvoices, $purchaseInvoices);
+
+                $query->where(function($q) use ($allInvoices, $customerIds, $vendorIds) {
+                    if (!empty($allInvoices)) {
+                        foreach ($allInvoices as $inv) {
+                            $q->orWhere('remarks', 'like', "%{$inv}%");
+                        }
+                    }
+                    if (!empty($customerIds)) {
+                        $q->orWhere(function($sub) use ($customerIds) {
+                            $sub->where('party_type', 'App\Models\Customer')
+                                ->whereIn('party_id', $customerIds);
+                        });
+                    }
+                    if (!empty($vendorIds)) {
+                        $q->orWhere(function($sub) use ($vendorIds) {
+                            $sub->where('party_type', 'App\Models\Vendor')
+                                ->whereIn('party_id', $vendorIds);
+                        });
+                    }
+                });
+            }
+
+            $vouchers = $query->orderBy('date', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
+
+            $voucherIds = $vouchers->pluck('id')->toArray();
+
+            // Fetch Voucher Details & Accounts
+            $detailsMap = DB::table('voucher_details')
+                ->join('accounts', 'accounts.id', '=', 'voucher_details.account_id')
+                ->whereIn('voucher_details.voucher_master_id', $voucherIds)
+                ->select('voucher_details.*', 'accounts.title as account_title')
+                ->get()
+                ->groupBy('voucher_master_id');
+
+            // Fetch users for creator info
+            $usersMap = DB::table('users')->pluck('name', 'id');
+
+            // Fetch customer and vendor names for resolving parties
+            $customersMap = DB::table('customers')->pluck('customer_name', 'id');
+            $vendorsMap = DB::table('vendors')->pluck('name', 'id');
+            $accountsMap = DB::table('accounts')->pluck('title', 'id');
+
+            $rows = [];
+            $totalAmount = 0;
+            $totalReceipts = 0;
+            $totalPayments = 0;
+            $totalExpenses = 0;
+            $totalJournals = 0;
+            $totalContras = 0;
+
+            foreach ($vouchers as $v) {
+                $partyName = '-';
+                if ($v->party_type && $v->party_id) {
+                    if ($v->party_type === 'App\Models\Customer') {
+                        $partyName = $customersMap->get($v->party_id) ?? '-';
+                    } elseif ($v->party_type === 'App\Models\Vendor') {
+                        $partyName = $vendorsMap->get($v->party_id) ?? '-';
+                    } elseif ($v->party_type === 'App\Models\Account') {
+                        $partyName = $accountsMap->get($v->party_id) ?? '-';
+                    } else {
+                        $partyName = class_basename($v->party_type) . ' #' . $v->party_id;
+                    }
+                }
+
+                $amt = (float)$v->total_amount;
+                $totalAmount += $amt;
+
+                if ($v->voucher_type === 'receipt') {
+                    $totalReceipts += $amt;
+                } elseif ($v->voucher_type === 'payment') {
+                    $totalPayments += $amt;
+                } elseif ($v->voucher_type === 'expense') {
+                    $totalExpenses += $amt;
+                } elseif ($v->voucher_type === 'journal') {
+                    $totalJournals += $amt;
+                } elseif ($v->voucher_type === 'contra') {
+                    $totalContras += $amt;
+                }
+
+                $vDetails = $detailsMap->get($v->id, collect());
+
+                $rows[] = [
+                    'id' => $v->id,
+                    'voucher_no' => $v->voucher_no,
+                    'voucher_type' => $v->voucher_type,
+                    'date' => \Carbon\Carbon::parse($v->date)->format('d/m/Y'),
+                    'status' => $v->status,
+                    'remarks' => $v->remarks ?? '-',
+                    'total_amount' => $amt,
+                    'party_name' => $partyName,
+                    'party_type' => $v->party_type ? class_basename($v->party_type) : '-',
+                    'created_by' => $usersMap->get($v->created_by) ?? '-',
+                    'details' => $vDetails->map(fn($d) => [
+                        'account_title' => $d->account_title,
+                        'debit' => (float)$d->debit,
+                        'credit' => (float)$d->credit,
+                        'narration' => $d->narration ?? '-',
+                    ])->values()->toArray(),
+                ];
+            }
+
+            return response()->json([
+                'data' => $rows,
+                'summary' => [
+                    'total_count' => count($rows),
+                    'total_amount' => round($totalAmount, 2),
+                    'total_receipts' => round($totalReceipts, 2),
+                    'total_payments' => round($totalPayments, 2),
+                    'total_expenses' => round($totalExpenses, 2),
+                    'total_journals' => round($totalJournals, 2),
+                    'total_contras' => round($totalContras, 2),
+                    'draft_count' => collect($rows)->where('status', 'draft')->count(),
+                    'posted_count' => collect($rows)->where('status', 'posted')->count(),
+                    'cancelled_count' => collect($rows)->where('status', 'cancelled')->count(),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        }
+    }
+
 }

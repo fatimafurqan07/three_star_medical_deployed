@@ -431,6 +431,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/report/item-stock', [ReportingController::class, 'item_stock_report'])->middleware('permission:item.stock.report.view')->name('report.item_stock');
     Route::post('/report/item-stock-fetch', [ReportingController::class, 'fetchItemStock'])->middleware('permission:item.stock.report.view')->name('report.item_stock.fetch');
 
+    Route::get('/report/voucher', [ReportingController::class, 'voucher_report'])->name('report.voucher');
+    Route::get('/report/voucher/fetch', [ReportingController::class, 'fetchVoucherReport'])->name('report.voucher.fetch');
+
     Route::get('report/purchase', [ReportingController::class, 'purchase_report'])->middleware('permission:purchase.report.view')->name('report.purchase');
     Route::post('report/purchase/fetch', [ReportingController::class, 'fetchPurchaseReport'])->middleware('permission:purchase.report.view')->name('report.purchase.fetch');
 
