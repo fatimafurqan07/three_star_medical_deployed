@@ -23,7 +23,7 @@ class VoucherService
     {
         return DB::transaction(function () use ($data, $lines, $user_id) {
             
-            $branchId = $data['branch_id'] ?? (auth()->check() ? auth()->user()->getBranchId() : 1);
+            $branchId = $data['branch_id'] ?? auth()->user()?->getBranchId() ?? 1;
 
             // 1. Create Header
             $voucher = VoucherMaster::create([

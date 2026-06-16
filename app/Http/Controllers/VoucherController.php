@@ -1354,9 +1354,27 @@ class VoucherController extends Controller
             // Create legacy ExpenseVoucher record (powers the list view)
             $savedExpense = ExpenseVoucher::create($voucherData);
 
+            // Resolve V2 credit account & party
+            $creditAccountId = null;
+            $partyType = null;
+            $partyId = $request->vendor_id;
+
+            if ($request->vendor_type === 'vendor') {
+                $balanceService = app(\App\Services\BalanceService::class);
+                $creditAccountId = $balanceService->getAccountsPayableId();
+                $partyType = \App\Models\Vendor::class;
+            } elseif ($request->vendor_type === 'customer') {
+                $balanceService = app(\App\Services\BalanceService::class);
+                $creditAccountId = $balanceService->getAccountsReceivableId();
+                $partyType = \App\Models\Customer::class;
+            } else {
+                $creditAccountId = (int) $request->vendor_id;
+                $partyType = \App\Models\Account::class;
+            }
+
             // Also create a VoucherMaster record (V2 system)
             $branchId = $this->getBranchId();
-            \App\Models\VoucherMaster::create([
+            $voucherMaster = \App\Models\VoucherMaster::create([
                 'voucher_type' => 'expense',
                 'voucher_no'   => $evid,
                 'date'         => $request->entry_date ?? now()->toDateString(),
@@ -1365,7 +1383,37 @@ class VoucherController extends Controller
                 'total_amount' => $request->total_amount ?? 0,
                 'branch_id'    => $branchId,
                 'created_by'   => auth()->id(),
+                'party_type'   => $partyType,
+                'party_id'     => $partyId,
+                'posted_at'    => now(),
             ]);
+
+            // Save V2 Details - Credit Side (Source of funds)
+            if ($creditAccountId) {
+                \App\Models\VoucherDetail::create([
+                    'voucher_master_id' => $voucherMaster->id,
+                    'account_id'        => $creditAccountId,
+                    'debit'             => 0,
+                    'credit'            => $request->total_amount ?? 0,
+                    'narration'         => $request->remarks ?? 'Expense Credit Source',
+                ]);
+            }
+
+            // Save V2 Details - Debit Side (Destination Expense accounts)
+            if ($request->row_account_id && $request->amount) {
+                foreach ($request->row_account_id as $index => $accId) {
+                    $rowAmount = isset($request->amount[$index]) ? (float) $request->amount[$index] : 0;
+                    if ($rowAmount > 0 && $accId) {
+                        \App\Models\VoucherDetail::create([
+                            'voucher_master_id' => $voucherMaster->id,
+                            'account_id'        => $accId,
+                            'debit'             => $rowAmount,
+                            'credit'            => 0,
+                            'narration'         => $request->remarks ?? 'Expense Row Detail',
+                        ]);
+                    }
+                }
+            }
 
             $amount = (float) $request->total_amount;
 

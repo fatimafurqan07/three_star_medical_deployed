@@ -577,8 +577,8 @@
                 {!! json_encode($vendors->map(fn($v) => ['id' => $v->id, 'name' => $v->name])) !!}
             </script>
 
-            {{-- Row 3: Type, Status, Branch & Generate --}}
-            <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr auto;">
+            {{-- Row 3: Type, Head, Status, Branch & Generate --}}
+            <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr auto;">
                 <div class="fg">
                     <label>Voucher Type</label>
                     <select id="sel_type">
@@ -588,6 +588,12 @@
                         <option value="expense">Expense Voucher (EV)</option>
                         <option value="journal">Journal Voucher (JV)</option>
                         <option value="contra">Contra Voucher (CV)</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label>Account Head</label>
+                    <select id="sel_head" class="select2-filter">
+                        <option value="all">-- Select Voucher Type First --</option>
                     </select>
                 </div>
                 <div class="fg">
@@ -732,11 +738,51 @@
                 populatePartyName(this.value);
             });
 
+            // ── Voucher Type / Account Head dynamic logic ──────────────────
+            function populateAccountHeads(voucherType) {
+                const sel = document.getElementById('sel_head');
+
+                // Destroy Select2 before rebuilding options
+                if ($(sel).hasClass('select2-hidden-accessible')) {
+                    $(sel).select2('destroy');
+                }
+
+                if (voucherType === 'all') {
+                    sel.innerHTML = '<option value="all">-- Select Voucher Type First --</option>';
+                    $(sel).select2({ width: '100%' });
+                    return;
+                }
+
+                sel.innerHTML = '<option value="all">Loading Account Heads...</option>';
+
+                fetch(`{{ route('report.voucher.heads') }}?voucher_type=${voucherType}`)
+                    .then(r => r.json())
+                    .then(res => {
+                        sel.innerHTML = '<option value="all">All Account Heads</option>';
+                        if (res.success && res.heads) {
+                            res.heads.forEach(h => {
+                                sel.innerHTML += `<option value="${h.id}">${h.name}</option>`;
+                            });
+                        }
+                        $(sel).select2({ width: '100%' });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        sel.innerHTML = '<option value="all">Error loading heads</option>';
+                        $(sel).select2({ width: '100%' });
+                    });
+            }
+
+            document.getElementById('sel_type').addEventListener('change', function() {
+                populateAccountHeads(this.value);
+            });
+
             // Initialize Select2 dropdowns
             $(document).ready(function() {
                 $('.select2-filter').select2({ width: '100%' });
-                // Init party name as empty
+                // Init party name and account heads as empty/all
                 populatePartyName('all');
+                populateAccountHeads('all');
             });
 
             // Date / Month / Year selection logic to keep inputs synchronized
@@ -780,6 +826,7 @@
 
                 document.getElementById('sel_party_type').value = 'all';
                 populatePartyName('all');
+                populateAccountHeads('all');
 
                 $('#sel_product').val('all').trigger('change');
 
@@ -798,6 +845,7 @@
                 const type      = document.getElementById('sel_type').value;
                 const status    = document.getElementById('sel_status').value;
                 const branch    = document.getElementById('sel_branch').value;
+                const head      = document.getElementById('sel_head').value;
 
                 // Resolve customer_id / vendor_id from the combined party selector
                 const partyType = document.getElementById('sel_party_type').value;
@@ -814,12 +862,14 @@
                     end_date:     end,
                     month:        month,
                     year:         year,
+                    party_type:   partyType,
                     customer_id:  customer,
                     vendor_id:    vendor,
                     product_id:   product,
                     voucher_type: type,
                     status:       status,
-                    branch_id:    branch
+                    branch_id:    branch,
+                    head_id:      head
                 });
 
                 console.log('Voucher Report Params:', Object.fromEntries(params));

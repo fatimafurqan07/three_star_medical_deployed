@@ -3117,17 +3117,20 @@ class ReportingController extends Controller
 
     public function fetchVoucherReport(Request $request)
     {
+        $this->repairMissingExpenseVouchersDetails();
         try {
             $startDate   = $request->get('start_date');
             $endDate     = $request->get('end_date');
             $month       = $request->get('month');
             $year        = $request->get('year');
+            $partyType   = $request->get('party_type');
             $customerId  = $request->get('customer_id');
             $vendorId    = $request->get('vendor_id');
             $productId    = $request->get('product_id');
             $voucherType = $request->get('voucher_type');
             $status      = $request->get('status');
             $branchId    = $request->get('branch_id');
+            $headId      = $request->get('head_id');
 
             // Apply Branch Scoping
             $sessionBranchId = $this->getBranchId();
@@ -3140,10 +3143,12 @@ class ReportingController extends Controller
                 'end_date' => $endDate,
                 'branch_id_final' => $branchId,
                 'session_branch' => $sessionBranchId,
+                'party_type' => $partyType,
                 'customer_id' => $customerId,
                 'vendor_id' => $vendorId,
                 'voucher_type' => $voucherType,
                 'status' => $status,
+                'head_id' => $headId,
                 'total_in_table' => DB::table('voucher_masters')->count(),
             ]);
 
@@ -3151,7 +3156,16 @@ class ReportingController extends Controller
 
             // 1. Branch scoping
             if ($branchId && $branchId !== 'all') {
-                $query->where('branch_id', $branchId);
+                if ($branchId == 1) {
+                    $query->where(function($q) use ($branchId) {
+                        $q->where('branch_id', $branchId)
+                          ->orWhereNull('branch_id')
+                          ->orWhere('branch_id', 0)
+                          ->orWhere('branch_id', '');
+                    });
+                } else {
+                    $query->where('branch_id', $branchId);
+                }
             }
 
             // 2. Date/Month/Year filters
@@ -3173,16 +3187,28 @@ class ReportingController extends Controller
                 $query->where('status', $status);
             }
 
-            // 5. Customer filter
-            if ($customerId && $customerId !== 'all') {
-                $query->where('party_type', 'App\Models\Customer')
-                      ->where('party_id', $customerId);
+            // 5. Party / Customer / Vendor filter
+            if ($partyType === 'customer') {
+                $query->where('party_type', 'App\Models\Customer');
+                if ($customerId && $customerId !== 'all') {
+                    $query->where('party_id', $customerId);
+                }
+            } elseif ($partyType === 'vendor') {
+                $query->where('party_type', 'App\Models\Vendor');
+                if ($vendorId && $vendorId !== 'all') {
+                    $query->where('party_id', $vendorId);
+                }
             }
 
-            // 6. Vendor filter
-            if ($vendorId && $vendorId !== 'all') {
-                $query->where('party_type', 'App\Models\Vendor')
-                      ->where('party_id', $vendorId);
+            // 5b. Account Head filter
+            if ($headId && $headId !== 'all') {
+                $query->whereExists(function ($q) use ($headId) {
+                    $q->select(DB::raw(1))
+                      ->from('voucher_details')
+                      ->join('accounts', 'accounts.id', '=', 'voucher_details.account_id')
+                      ->whereColumn('voucher_details.voucher_master_id', 'voucher_masters.id')
+                      ->where('accounts.head_id', $headId);
+                });
             }
 
             // 7. Product filter
@@ -3327,6 +3353,157 @@ class ReportingController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        }
+    }
+
+    public function getVoucherHeads(Request $request)
+    {
+        $this->repairMissingExpenseVouchersDetails();
+        try {
+            $voucherType = $request->get('voucher_type');
+            $branchId    = $this->getBranchId();
+
+            $query = DB::table('account_heads')
+                ->select('account_heads.id', 'account_heads.name')
+                ->join('accounts', 'accounts.head_id', '=', 'account_heads.id')
+                ->join('voucher_details', 'voucher_details.account_id', '=', 'accounts.id')
+                ->join('voucher_masters', 'voucher_masters.id', '=', 'voucher_details.voucher_master_id')
+                ->distinct();
+
+            if ($branchId && $branchId !== 'all') {
+                if ($branchId == 1) {
+                    $query->where(function($q) use ($branchId) {
+                        $q->where('voucher_masters.branch_id', $branchId)
+                          ->orWhereNull('voucher_masters.branch_id')
+                          ->orWhere('voucher_masters.branch_id', 0)
+                          ->orWhere('voucher_masters.branch_id', '');
+                    });
+                } else {
+                    $query->where('voucher_masters.branch_id', $branchId);
+                }
+            }
+
+            if ($voucherType && $voucherType !== 'all') {
+                $query->where('voucher_masters.voucher_type', $voucherType);
+            }
+
+            $heads = $query->orderBy('account_heads.name')->get();
+
+            // Fallback: If no vouchers recorded yet, return all account heads of the branch/system
+            if ($heads->isEmpty()) {
+                $fallbackQuery = DB::table('account_heads')->select('id', 'name');
+
+                if ($branchId && $branchId !== 'all') {
+                    if ($branchId == 1) {
+                        $fallbackQuery->where(function($q) use ($branchId) {
+                            $q->where('branch_id', $branchId)
+                              ->orWhereNull('branch_id')
+                              ->orWhere('branch_id', 0)
+                              ->orWhere('branch_id', '');
+                        });
+                    } else {
+                        $fallbackQuery->where('branch_id', $branchId);
+                    }
+                }
+
+                $heads = $fallbackQuery->orderBy('name')->get();
+            }
+
+            return response()->json([
+                'success' => true,
+                'heads'   => $heads
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    private function repairMissingExpenseVouchersDetails()
+    {
+        try {
+            $masters = DB::table('voucher_masters')
+                ->where('voucher_type', 'expense')
+                ->get();
+
+            foreach ($masters as $master) {
+                // Check if details exist
+                $hasDetails = DB::table('voucher_details')
+                    ->where('voucher_master_id', $master->id)
+                    ->exists();
+
+                if (!$hasDetails) {
+                    // Find matching legacy expense voucher
+                    $legacy = DB::table('expense_vouchers')
+                        ->where('evid', $master->voucher_no)
+                        ->first();
+
+                    if ($legacy) {
+                        // Reconstruct creditAccountId and partyType
+                        $creditAccountId = null;
+                        $partyType = null;
+                        $partyId = $legacy->party_id;
+
+                        if ($legacy->type === 'vendor') {
+                            $balanceService = app(\App\Services\BalanceService::class);
+                            $creditAccountId = $balanceService->getAccountsPayableId();
+                            $partyType = \App\Models\Vendor::class;
+                        } elseif ($legacy->type === 'customer') {
+                            $balanceService = app(\App\Services\BalanceService::class);
+                            $creditAccountId = $balanceService->getAccountsReceivableId();
+                            $partyType = \App\Models\Customer::class;
+                        } else {
+                            $creditAccountId = (int) $legacy->party_id;
+                            $partyType = \App\Models\Account::class;
+                        }
+
+                        // Update voucher_masters with party details if empty
+                        if (empty($master->party_type) || empty($master->party_id)) {
+                            DB::table('voucher_masters')
+                                ->where('id', $master->id)
+                                ->update([
+                                    'party_type' => $partyType,
+                                    'party_id'   => $partyId,
+                                ]);
+                        }
+
+                        // Write Credit Detail
+                        if ($creditAccountId) {
+                            DB::table('voucher_details')->insert([
+                                'voucher_master_id' => $master->id,
+                                'account_id'        => $creditAccountId,
+                                'debit'             => 0,
+                                'credit'            => $legacy->total_amount ?? 0,
+                                'narration'         => $master->remarks ?? 'Expense Credit Source',
+                                'created_at'        => $master->created_at ?? now(),
+                                'updated_at'        => $master->updated_at ?? now(),
+                            ]);
+                        }
+
+                        // Write Debit Details
+                        $rowAccountIds = json_decode($legacy->row_account_id, true);
+                        $amounts = json_decode($legacy->amount, true);
+
+                        if (is_array($rowAccountIds) && is_array($amounts)) {
+                            foreach ($rowAccountIds as $index => $accId) {
+                                $rowAmount = isset($amounts[$index]) ? (float) $amounts[$index] : 0;
+                                if ($rowAmount > 0 && $accId) {
+                                    DB::table('voucher_details')->insert([
+                                        'voucher_master_id' => $master->id,
+                                        'account_id'        => $accId,
+                                        'debit'             => $rowAmount,
+                                        'credit'            => 0,
+                                        'narration'         => $master->remarks ?? 'Expense Row Detail',
+                                        'created_at'        => $master->created_at ?? now(),
+                                        'updated_at'        => $master->updated_at ?? now(),
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Repair Expense Vouchers Details failed: ' . $e->getMessage());
         }
     }
 

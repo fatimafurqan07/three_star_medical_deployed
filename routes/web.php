@@ -433,6 +433,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/report/voucher', [ReportingController::class, 'voucher_report'])->name('report.voucher');
     Route::get('/report/voucher/fetch', [ReportingController::class, 'fetchVoucherReport'])->name('report.voucher.fetch');
+    Route::get('/report/voucher/heads', [ReportingController::class, 'getVoucherHeads'])->name('report.voucher.heads');
 
     Route::get('report/purchase', [ReportingController::class, 'purchase_report'])->middleware('permission:purchase.report.view')->name('report.purchase');
     Route::post('report/purchase/fetch', [ReportingController::class, 'fetchPurchaseReport'])->middleware('permission:purchase.report.view')->name('report.purchase.fetch');
