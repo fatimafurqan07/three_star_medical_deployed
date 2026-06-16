@@ -2440,7 +2440,7 @@ class ReportingController extends Controller
                 ->select('sale_items.product_id', DB::raw('SUM(total) as amount'))
                 ->groupBy('sale_items.product_id')
                 ->get()->keyBy('product_id');
-
+            
             $rows = [];
             $gOpening = 0; $gPurchased = 0; $gSold = 0; $gClosing = 0; $gPurVal = 0; $gSaleVal = 0;
 
@@ -3134,6 +3134,18 @@ class ReportingController extends Controller
             if ($sessionBranchId) {
                 $branchId = $sessionBranchId;
             }
+
+            \Log::info('VoucherReport Debug', [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'branch_id_final' => $branchId,
+                'session_branch' => $sessionBranchId,
+                'customer_id' => $customerId,
+                'vendor_id' => $vendorId,
+                'voucher_type' => $voucherType,
+                'status' => $status,
+                'total_in_table' => DB::table('voucher_masters')->count(),
+            ]);
 
             $query = DB::table('voucher_masters');
 

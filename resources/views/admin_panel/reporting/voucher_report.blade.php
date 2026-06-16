@@ -822,6 +822,7 @@
                     branch_id:    branch
                 });
 
+                console.log('Voucher Report Params:', Object.fromEntries(params));
                 fetch(`{{ route('report.voucher.fetch') }}?${params}`)
                     .then(r => r.json())
                     .then(res => {
