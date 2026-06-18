@@ -31,15 +31,20 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
             flex-wrap: wrap;
             gap: 12px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #38bdf8 100%);
+            border-radius: 14px;
+            padding: 22px 28px;
+            color: #fff;
+            box-shadow: 0 6px 24px rgba(37, 99, 235, .32);
         }
 
         .led-topbar h4 {
             font-size: 1.35rem;
             font-weight: 800;
-            color: var(--ink);
+            color: #fff;
             margin: 0;
             display: flex;
             align-items: center;
@@ -47,8 +52,8 @@
         }
 
         .led-topbar p {
-            margin: 0;
-            color: var(--muted);
+            margin: 3px 0 0;
+            color: rgba(255, 255, 255, .82);
             font-size: .85rem;
         }
 
@@ -97,62 +102,139 @@
             border: 1px solid var(--border);
         }
 
-        /* ── Filter card ─────────────────────────────────────────── */
+        /* Filters */
         .filter-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 22px;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px;
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
             align-items: flex-end;
-            margin-bottom: 12px;
         }
 
-        .fg label {
-            font-size: .73rem;
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: .62rem;
             font-weight: 700;
+            color: #475569;
             text-transform: uppercase;
-            letter-spacing: .5px;
-            color: var(--muted);
-            display: block;
-            margin-bottom: 5px;
+            letter-spacing: .75px;
         }
 
-        .fg select,
-        .fg input {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 12px;
-            font-size: .88rem;
-            color: var(--ink);
-            background: var(--bg);
+        .filter-group select,
+        .filter-group input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
+            color: #1e293b;
             outline: none;
-            transition: border-color .15s, background .15s;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
             box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
+            width: 100%;
         }
 
-        .fg select:focus,
-        .fg input:focus {
-            border-color: var(--brand);
-            background: var(--white);
-            box-shadow: 0 0 0 3px #ede9fe80;
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
+            background: #fff;
         }
 
-        .generate-btn-wrap {
-            padding-bottom: 0;
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            margin-left: auto;
+            align-items: center;
         }
 
-        @media (max-width:768px) {
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
+        .btn-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 6px;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            min-width: 100px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-filter-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-filter-search {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-filter-search:hover {
+            background: #0284c7;
+        }
+
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
+        }
+
+        .btn-filter-reset:hover {
+            background: #64748b;
+        }
+
+        /* Select2 Theme Overrides */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            height: 32px !important;
+            background-color: #f8fafc !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .8rem !important;
+            padding-left: 8px !important;
+            padding-right: 20px !important;
+            line-height: 30px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 6px !important;
+        }
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--open .select2-selection--single {
+            border-color: #0ea5e9 !important;
+            background-color: #fff !important;
         }
 
         /* ── Loader ──────────────────────────────────────────────── */
@@ -487,7 +569,7 @@
         <div class="led-topbar">
             <div>
                 <h4>
-                    <svg style="width:22px;height:22px;color:#4f46e5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <svg style="width:22px;height:22px;color:#fff" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
@@ -503,128 +585,125 @@
 
         {{-- Filter Card --}}
         <div class="filter-card">
-            {{-- Row 1: Dates & Month/Year selectors --}}
-            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
-                <div class="fg">
-                    <label>Start Date</label>
-                    <input type="date" id="sel_start">
+            <div class="filter-inputs-container">
+                {{-- Row 1: Dates & Month/Year selectors --}}
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Start Date</label>
+                        <input type="date" id="sel_start">
+                    </div>
+                    <div class="filter-group">
+                        <label>End Date</label>
+                        <input type="date" id="sel_end">
+                    </div>
+                    <div class="filter-group">
+                        <label>Month</label>
+                        <select id="sel_month">
+                            <option value="all">Select Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Year</label>
+                        <select id="sel_year">
+                            <option value="all">Select Year</option>
+                            @for ($y = 2024; $y <= 2030; $y++)
+                                <option value="{{ $y }}">{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
                 </div>
-                <div class="fg">
-                    <label>End Date</label>
-                    <input type="date" id="sel_end">
-                </div>
-                <div class="fg">
-                    <label>Month</label>
-                    <select id="sel_month">
-                        <option value="all">Select Month</option>
-                        <option value="1">January</option>
-                        <option value="2">February</option>
-                        <option value="3">March</option>
-                        <option value="4">April</option>
-                        <option value="5">May</option>
-                        <option value="6">June</option>
-                        <option value="7">July</option>
-                        <option value="8">August</option>
-                        <option value="9">September</option>
-                        <option value="10">October</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Year</label>
-                    <select id="sel_year">
-                        <option value="all">Select Year</option>
-                        @for ($y = 2024; $y <= 2030; $y++)
-                            <option value="{{ $y }}">{{ $y }}</option>
-                        @endfor
-                    </select>
-                </div>
-            </div>
 
-            {{-- Row 2: Party Type / Party Name / Product --}}
-            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-                <div class="fg">
-                    <label>Party Type</label>
-                    <select id="sel_party_type">
-                        <option value="all">All Parties</option>
-                        <option value="customer">Customer</option>
-                        <option value="vendor">Vendor</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label id="lbl_party_name">Party Name</label>
-                    <select id="sel_party_name" class="select2-filter">
-                        <option value="all">-- Select Party Type First --</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Product</label>
-                    <select id="sel_product" class="select2-filter">
-                        <option value="all">All Products</option>
-                        @foreach ($products as $p)
-                            <option value="{{ $p->id }}">{{ $p->item_code }} — {{ $p->item_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            {{-- Hidden data for customers & vendors (JSON injected from server) --}}
-            <script id="customers-data" type="application/json">
-                {!! json_encode($customers->map(fn($c) => ['id' => $c->id, 'name' => $c->customer_name])) !!}
-            </script>
-            <script id="vendors-data" type="application/json">
-                {!! json_encode($vendors->map(fn($v) => ['id' => $v->id, 'name' => $v->name])) !!}
-            </script>
-
-            {{-- Row 3: Type, Head, Status, Branch & Generate --}}
-            <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr auto;">
-                <div class="fg">
-                    <label>Voucher Type</label>
-                    <select id="sel_type">
-                        <option value="all">All Types</option>
-                        <option value="receipt">Receipt Voucher (RV)</option>
-                        <option value="payment">Payment Voucher (PV)</option>
-                        <option value="expense">Expense Voucher (EV)</option>
-                        <option value="journal">Journal Voucher (JV)</option>
-                        <option value="contra">Contra Voucher (CV)</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Account Head</label>
-                    <select id="sel_head" class="select2-filter">
-                        <option value="all">-- Select Voucher Type First --</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Status</label>
-                    <select id="sel_status">
-                        <option value="all">All Status</option>
-                        <option value="posted">Posted</option>
-                        <option value="draft">Draft</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Branch</label>
-                    <select id="sel_branch" {{ !$isSuperAdmin ? 'disabled' : '' }}>
-                        @if(!$isSuperAdmin)
-                            <option value="{{ $activeBranch->id ?? 'all' }}">{{ $activeBranch->name ?? 'Current Office' }}</option>
-                        @else
-                            <option value="all">All Branches</option>
-                            @foreach($branches as $b)
-                                <option value="{{ $b->id }}" {{ isset($activeBranch) && $activeBranch->id == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                {{-- Row 2: Party Type / Party Name / Product --}}
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Party Type</label>
+                        <select id="sel_party_type">
+                            <option value="all">All Parties</option>
+                            <option value="customer">Customer</option>
+                            <option value="vendor">Vendor</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 200px;">
+                        <label id="lbl_party_name">Party Name</label>
+                        <select id="sel_party_name" class="select2-filter">
+                            <option value="all">-- Select Party Type First --</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 200px;">
+                        <label>Product</label>
+                        <select id="sel_product" class="select2-filter">
+                            <option value="all">All Products</option>
+                            @foreach ($products as $p)
+                                <option value="{{ $p->id }}">{{ $p->item_code }} — {{ $p->item_name }}</option>
                             @endforeach
-                        @endif
-                    </select>
+                        </select>
+                    </div>
                 </div>
-                <div class="fg generate-btn-wrap d-flex gap-2">
-                    <button class="btn-led btn-gen" id="btnGenerate" style="height:41px; padding: 0 24px;">
-                        🔍 Generate
-                    </button>
-                    <button class="btn-led bg-light text-dark" id="btnResetFilters" style="height:41px;" title="Reset Filters">
-                        🔄
-                    </button>
+
+                {{-- Hidden data for customers & vendors (JSON injected from server) --}}
+                <script id="customers-data" type="application/json">
+                    {!! json_encode($customers->map(fn($c) => ['id' => $c->id, 'name' => $c->customer_name])) !!}
+                </script>
+                <script id="vendors-data" type="application/json">
+                    {!! json_encode($vendors->map(fn($v) => ['id' => $v->id, 'name' => $v->name])) !!}
+                </script>
+
+                {{-- Row 3: Type, Head, Status, Branch & Generate --}}
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Voucher Type</label>
+                        <select id="sel_type">
+                            <option value="all">All Types</option>
+                            <option value="receipt">Receipt Voucher (RV)</option>
+                            <option value="payment">Payment Voucher (PV)</option>
+                            <option value="expense">Expense Voucher (EV)</option>
+                            <option value="journal">Journal Voucher (JV)</option>
+                            <option value="contra">Contra Voucher (CV)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 0 1 180px;">
+                        <label>Account Head</label>
+                        <select id="sel_head" class="select2-filter">
+                            <option value="all">-- Select Voucher Type First --</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="sel_status">
+                            <option value="all">All Status</option>
+                            <option value="posted">Posted</option>
+                            <option value="draft">Draft</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Branch</label>
+                        <select id="sel_branch" {{ !$isSuperAdmin ? 'disabled' : '' }}>
+                            @if(!$isSuperAdmin)
+                                <option value="{{ $activeBranch->id ?? 'all' }}">{{ $activeBranch->name ?? 'Current Office' }}</option>
+                            @else
+                                <option value="all">All Branches</option>
+                                @foreach($branches as $b)
+                                    <option value="{{ $b->id }}" {{ isset($activeBranch) && $activeBranch->id == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="btn-filter-action btn-filter-search" id="btnGenerate">🔍 Search</button>
+                    <button type="button" class="btn-filter-action btn-filter-reset" id="btnResetFilters">↺ Reset</button>
                 </div>
             </div>
         </div>

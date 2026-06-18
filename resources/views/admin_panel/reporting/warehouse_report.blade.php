@@ -80,68 +80,160 @@
             color: #fff;
         }
 
-        /* Filter Row */
+        /* Filter Row Styles */
         .filter-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px 20px;
             margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .filter-row {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: flex-end;
         }
 
-        .f-group {
+        .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
         }
 
-        .f-group label {
-            font-size: .75rem;
+        .filter-group label {
+            font-size: .62rem;
             font-weight: 700;
-            color: var(--muted);
+            color: #475569;
             text-transform: uppercase;
+            letter-spacing: .75px;
         }
 
-        .f-input {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: .85rem;
-            min-width: 160px;
-            background: var(--bg);
+        .filter-group select,
+        .filter-group input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
+            color: #1e293b;
             outline: none;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
+            width: 100%;
         }
 
-        .f-input:focus {
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
             background: #fff;
-            border-color: var(--brand);
         }
 
-        .btn-search {
-            background: var(--brand);
-            color: #fff;
-            padding: 8px 20px;
-            border-radius: 8px;
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+        }
+
+        .btn-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border-radius: 6px;
+            font-size: .72rem;
             font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            min-width: 80px;
+            height: 32px;
             border: none;
-            cursor: pointer;
-            height: 36px;
+            transition: background-color 0.2s, transform 0.1s;
         }
 
-        .btn-reset {
-            background: var(--bg);
-            color: var(--ink);
-            border: 1px solid var(--border);
-            padding: 8px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            height: 36px;
+        .btn-filter-action:active {
+            transform: scale(0.98);
         }
+
+        .btn-filter-search {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-filter-search:hover {
+            background: #0284c7;
+        }
+
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
+        }
+
+        .btn-filter-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-csv-action {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .btn-csv-action:hover {
+            background: #059669;
+        }
+
+        .btn-print-action {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-print-action:hover {
+            background: #0284c7;
+        }
+
+        /* Select2 Theme Overrides */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            height: 32px !important;
+            background-color: #f8fafc !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .8rem !important;
+            padding-left: 8px !important;
+            padding-right: 20px !important;
+            line-height: 30px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 6px !important;
+        }
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--open .select2-selection--single {
+            border-color: #0ea5e9 !important;
+            background-color: #fff !important;
+        }
+
 
         /* KPI Strip */
         .kpi-row {
@@ -343,41 +435,31 @@
                 </h4>
                 <p>Track stock levels, purchases, and sales for a specific warehouse.</p>
             </div>
-            <div class="rpt-actions">
-                <button class="btn-rpt btn-csv" onclick="exportData()">⬇ CSV</button>
-                <button class="btn-rpt btn-print" onclick="window.print()">🖨 Print</button>
-            </div>
         </div>
 
         <div class="filter-card">
-            <div class="row w-100 g-3">
-                <div class="col-md-3">
-                    <div class="f-group">
+            <div class="filter-inputs-container">
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
                         <label>Warehouse</label>
-                        <select id="warehouseId" class="f-input">
+                        <select id="warehouseId" class="select2">
                             <option value="all">All Warehouses</option>
                             @foreach ($warehouses as $wh)
                                 <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="f-group">
+                    <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 130px;">
                         <label>Date From</label>
-                        <input type="date" id="dateFrom" class="f-input">
+                        <input type="date" id="dateFrom">
                     </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="f-group">
+                    <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 130px;">
                         <label>Date To</label>
-                        <input type="date" id="dateTo" class="f-input">
+                        <input type="date" id="dateTo">
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="f-group">
+                    <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
                         <label>Category</label>
-                        <select id="filterCategory" class="f-input select2">
+                        <select id="filterCategory" class="select2">
                             <option value="all">All Category</option>
                             @foreach(App\Models\Category::orderBy('name')->get() as $c)
                                 <option value="{{ $c->id }}">{{ $c->name }}</option>
@@ -385,40 +467,28 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="f-group" style="flex-direction:row; align-items:flex-end; gap:8px;">
-                        <button class="btn-search w-100" onclick="loadReport()">Load Report</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row w-100 g-3 mt-1">
-                <div class="col-md-3">
-                    <div class="f-group">
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
                         <label>Sub-Category</label>
-                        <select id="filterSubCategory" class="f-input select2">
+                        <select id="filterSubCategory" class="select2">
                             <option value="all">All Sub-category</option>
                             @foreach(App\Models\Subcategory::orderBy('name')->get() as $sc)
                                 <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="f-group">
+                    <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
                         <label>Brand</label>
-                        <select id="filterBrand" class="f-input select2">
+                        <select id="filterBrand" class="select2">
                             <option value="all">All Brands</option>
                             @foreach(App\Models\Brand::orderBy('name')->get() as $b)
                                 <option value="{{ $b->id }}">{{ $b->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="f-group">
+                    <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 250px;">
                         <label>Product</label>
-                        <select id="filterProduct" class="f-input select2">
+                        <select id="filterProduct" class="select2">
                             <option value="all">All Products</option>
                             @foreach(App\Models\Product::orderBy('item_name')->get() as $p)
                                 <option value="{{ $p->id }}" 
@@ -430,14 +500,16 @@
                             @endforeach
                         </select>
                     </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="f-group">
-                        <button class="btn-reset w-100" onclick="resetFilters()">Reset</button>
+                    <div class="filter-group" style="flex-direction: row; gap: 6px; align-items: flex-end; min-width: 360px; margin-left: 10px; flex: 1.5;">
+                        <button class="btn-filter-action btn-filter-search" onclick="loadReport()" style="flex: 1;">🔍 Search</button>
+                        <button class="btn-filter-action btn-filter-reset" onclick="resetFilters()" style="flex: 1;">↺ Reset</button>
+                        <button class="btn-filter-action btn-csv-action" onclick="exportData()" style="flex: 1;">⬇ CSV</button>
+                        <button class="btn-filter-action btn-print-action" onclick="window.print()" style="flex: 1;">🖨 Print</button>
                     </div>
                 </div>
             </div>
         </div>
+
 
         <!-- KPI Strip -->
         <div class="kpi-row" style="display: none;" id="kpiStrip">
@@ -556,7 +628,7 @@
         });
 
         function resetFilters() {
-            document.getElementById('warehouseId').value = 'all';
+            $('#warehouseId').val('all').trigger('change.select2');
             document.getElementById('dateFrom').value = '';
             document.getElementById('dateTo').value = '';
             $('#filterCategory').val('all').trigger('change.select2');

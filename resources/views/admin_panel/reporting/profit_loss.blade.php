@@ -16,52 +16,114 @@
             min-height: 100vh;
         }
 
-        /* Filter */
-        .filter-bar {
+        /* Filter Row Styles */
+        .filter-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: #fff;
             border: 1px solid #e2e8f0;
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 16px 20px;
             margin-bottom: 22px;
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
-            flex-wrap: wrap;
             box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
         }
 
-        .filter-bar .fg {
+        .filter-inputs-container {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 3px;
-            min-width: 155px;
+            gap: 12px;
         }
 
-        .filter-bar label {
-            font-size: 11px;
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: .62rem;
             font-weight: 700;
+            color: #475569;
             text-transform: uppercase;
-            letter-spacing: .05em;
-            color: #64748b;
+            letter-spacing: .75px;
         }
 
-        .filter-bar input {
+        .filter-group select,
+        .filter-group input {
             border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 7px 11px;
-            font-size: 13px;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
             color: #1e293b;
+            outline: none;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
+            width: 100%;
         }
 
-        .btn-apply {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 20px;
-            font-size: 13px;
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
+            background: #fff;
+        }
+
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+        }
+
+        .btn-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 6px;
+            font-size: .8rem;
             font-weight: 600;
             cursor: pointer;
+            padding: 6px 12px;
+            min-width: 100px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-filter-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-filter-search {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-filter-search:hover {
+            background: #0284c7;
+        }
+
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
+        }
+
+        .btn-filter-reset:hover {
+            background: #64748b;
         }
 
         .btn-print-rpt {
@@ -72,11 +134,11 @@
             font-size: 13px;
             color: #475569;
             cursor: pointer;
+            transition: .2s;
         }
 
-        .btn-print-rpt:hover,
-        .btn-apply:hover {
-            opacity: .88;
+        .btn-print-rpt:hover {
+            background: #f1f5f9;
         }
 
         /* KPI */
@@ -406,12 +468,33 @@
             </div>
 
             {{-- FILTER --}}
-            <form method="GET" action="{{ route('reports.profit_loss') }}" class="filter-bar no-print">
-                <div class="fg"><label>From Date</label><input type="date" name="start_date"
-                        value="{{ $start }}"></div>
-                <div class="fg"><label>To Date</label><input type="date" name="end_date" value="{{ $end }}">
+            <form method="GET" action="{{ route('reports.profit_loss') }}" class="filter-card no-print">
+                <div class="filter-inputs-container">
+                    <div class="filter-row">
+                        <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
+                            <label>From Date</label>
+                            <input type="date" name="start_date" id="start_date" value="{{ $start }}">
+                        </div>
+                        <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
+                            <label>To Date</label>
+                            <input type="date" name="end_date" id="end_date" value="{{ $end }}">
+                        </div>
+                        <div class="filter-group" style="flex-direction: row; gap: 6px; align-items: flex-end; min-width: 240px; margin-left: 10px;">
+                            <button type="submit" class="btn-filter-action btn-filter-search" style="flex: 1; height: 32px;">
+                                <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Generate
+                            </button>
+                            <a href="{{ route('reports.profit_loss') }}" class="btn-filter-action btn-filter-reset" style="text-decoration:none; flex: 1; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+                                </svg>
+                                Reset
+                            </a>
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" class="btn-apply"><i class="fas fa-search me-1"></i> Generate</button>
             </form>
 
             {{-- KEY EXPLANATION NOTE --}}

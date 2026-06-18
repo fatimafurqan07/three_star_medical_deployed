@@ -29,44 +29,58 @@
 
         /* Filters */
         .filter-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: #fff;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             padding: 16px 20px;
             margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .filter-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
             align-items: flex-end;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
         }
 
         .filter-group label {
-            font-size: .78rem;
-            font-weight: 600;
+            font-size: .62rem;
+            font-weight: 700;
             color: #475569;
             text-transform: uppercase;
-            letter-spacing: .5px;
+            letter-spacing: .75px;
         }
 
         .filter-group select,
         .filter-group input {
             border: 1px solid #cbd5e1;
-            border-radius: 7px;
-            padding: 7px 10px;
-            font-size: .88rem;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
             color: #1e293b;
             outline: none;
             background: #f8fafc;
-            min-width: 160px;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
         }
 
         .filter-group select:focus,
@@ -75,34 +89,142 @@
             background: #fff;
         }
 
-        .btn-search {
-            background: #0ea5e9;
-            color: #fff;
-            border: none;
-            border-radius: 7px;
-            padding: 8px 20px;
-            font-size: .88rem;
-            font-weight: 600;
-            cursor: pointer;
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+            margin-top: 14px;
         }
 
-        .btn-search:hover {
+        .btn-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border-radius: 6px;
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            min-width: 80px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-filter-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-filter-search {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-filter-search:hover {
             background: #0284c7;
         }
 
-        .btn-reset {
-            background: #f1f5f9;
-            color: #475569;
-            border: 1px solid #e2e8f0;
-            border-radius: 7px;
-            padding: 8px 16px;
-            font-size: .88rem;
-            font-weight: 600;
-            cursor: pointer;
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
         }
 
-        .btn-reset:hover {
-            background: #e2e8f0;
+        .btn-filter-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-pdf-action {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-pdf-action:hover {
+            background: #dc2626;
+        }
+
+        .btn-print-action {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .btn-print-action:hover {
+            background: #4f46e5;
+        }
+
+        /* KPI Cards */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .kpi-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+
+        .kpi-card .kpi-label {
+            font-size: .75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .kpi-card.kpi-net .kpi-value {
+            color: #6366f1;
+        }
+
+        .kpi-card.kpi-paid .kpi-value {
+            color: #10b981;
+        }
+
+        .kpi-card.kpi-due .kpi-value {
+            color: #ef4444;
+        }
+
+        .kpi-card.kpi-ret .kpi-value {
+            color: #f59e0b;
+        }
+
+        /* Select2 Theme Overrides */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            height: 32px !important;
+            background-color: #f8fafc !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .8rem !important;
+            padding-left: 8px !important;
+            padding-right: 20px !important;
+            line-height: 30px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 6px !important;
+        }
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--open .select2-selection--single {
+            border-color: #0ea5e9 !important;
+            background-color: #fff !important;
         }
 
         /* ── ProWaves Detail Report Styles ──────────────── */
@@ -212,97 +334,125 @@
 
     <div class="rpt-page">
         {{-- Header & Actions --}}
-        <div class="rpt-actions" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="rpt-header" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
                 <h4 style="margin:0; font-size:1.2rem; color:#1e293b;">🧾 Sale Report - Detailed</h4>
                 <p style="margin:4px 0 0; font-size:.85rem; color:#64748b;">Invoice-wise detailed sales analysis</p>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button class="btn-pdf" id="btnExportPdf" style="background:#ef4444; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer;">Export PDF</button>
-                <button class="btn-print" onclick="window.print()" style="background:#6366f1; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer;">🖨 Print</button>
             </div>
         </div>
 
         {{-- Filters --}}
         <div class="filter-card">
-            <div class="filter-row" style="display:flex; flex-wrap:wrap; gap:15px;">
-                <div class="filter-group" style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Start Date</label>
-                    <input type="date" id="start_date" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem;">
+            <div class="filter-inputs-container">
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Category</label>
+                        <select id="filterCategory" class="select2-product">
+                            <option value="all">All Category</option>
+                            @foreach(App\Models\Category::orderBy('name')->get() as $c)
+                                <option value="{{ $c->id }}">{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Sub-Category</label>
+                        <select id="filterSubCategory" class="select2-product">
+                            <option value="all">All Sub-category</option>
+                            @foreach(App\Models\Subcategory::orderBy('name')->get() as $sc)
+                                <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Company (Brand)</label>
+                        <select id="filterBrand" class="select2-product">
+                            <option value="all">All Companies</option>
+                            @foreach(App\Models\Brand::orderBy('name')->get() as $b)
+                                <option value="{{ $b->id }}">{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 350px;">
+                        <label>Product</label>
+                        <select id="filterProduct" class="select2-product">
+                            <option value="all">All Products</option>
+                            @foreach(App\Models\Product::orderBy('item_name')->get() as $p)
+                                <option value="{{ $p->id }}" 
+                                    data-cat="{{ $p->category_id }}" 
+                                    data-sub="{{ $p->sub_category_id }}"
+                                    data-brand="{{ $p->brand_id }}">
+                                    {{ $p->item_code }} — {{ $p->item_name }} {{ $p->brand->name ?? '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Customer</label>
+                        <select id="filterCustomer" class="select2-product">
+                            <option value="all">All Customers</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Warehouse</label>
+                        <select id="filterWarehouse" class="select2-product">
+                            <option value="all">All Warehouses</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="filter-group" style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">End Date</label>
-                    <input type="date" id="end_date" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem;">
-                </div>
-                <div class="filter-group" style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Customer</label>
-                    <select id="filterCustomer" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem; width:180px;">
-                        <option value="all">All Customers</option>
-                    </select>
-                </div>
-                <div class="filter-group" style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Warehouse</label>
-                    <select id="filterWarehouse" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem; width:180px;">
-                        <option value="all">All Warehouses</option>
-                    </select>
-                </div>
-                <div class="filter-group" style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Status</label>
-                    <select id="filterStatus" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem;">
-                        <option value="all">All Status</option>
-                        <option value="posted">Posted</option>
-                        <option value="booked">Booked</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="returned">Returned</option>
-                    </select>
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+                        <label>Start Date</label>
+                        <input type="date" id="start_date">
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+                        <label>End Date</label>
+                        <input type="date" id="end_date">
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+                        <label>Status</label>
+                        <select id="filterStatus" class="select2-product">
+                            <option value="all">All Status</option>
+                            <option value="posted">Posted</option>
+                            <option value="booked">Booked</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="returned">Returned</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex-direction: row; gap: 6px; align-items: flex-end; min-width: 400px; margin-left: 10px; flex: 1.5;">
+                        <button class="btn-filter-action btn-filter-search" id="btnSearch" style="flex: 1;">🔍 Search</button>
+                        <button class="btn-filter-action btn-filter-reset" id="btnReset" style="flex: 1;">↺ Reset</button>
+                        <button class="btn-filter-action btn-pdf-action" id="btnExportPdf" style="flex: 1.2;">Export PDF</button>
+                        <button class="btn-filter-action btn-print-action" onclick="printReport()" style="flex: 1;">🖨 Print</button>
+                    </div>
                 </div>
             </div>
-            <div class="filter-row mt-3" style="display:flex; flex-wrap:wrap; gap:15px;">
-                <div class="filter-group">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Category</label>
-                    <select id="filterCategory" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem;">
-                        <option value="all">All Category</option>
-                        @foreach(App\Models\Category::orderBy('name')->get() as $c)
-                            <option value="{{ $c->id }}">{{ $c->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Sub-Category</label>
-                    <select id="filterSubCategory" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem;">
-                        <option value="all">All Sub-category</option>
-                        @foreach(App\Models\Subcategory::orderBy('name')->get() as $sc)
-                            <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Company (Brand)</label>
-                    <select id="filterBrand" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:.88rem;">
-                        <option value="all">All Companies</option>
-                        @foreach(App\Models\Brand::orderBy('name')->get() as $b)
-                            <option value="{{ $b->id }}">{{ $b->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="filter-group" style="flex: 2; min-width:300px;">
-                    <label style="font-size:.75rem; font-weight:700; color:#475569; text-transform:uppercase;">Product</label>
-                    <select id="filterProduct" class="select2-product" style="width:100%;">
-                        <option value="all">All Products</option>
-                        @foreach(App\Models\Product::orderBy('item_name')->get() as $p)
-                            <option value="{{ $p->id }}" 
-                                data-cat="{{ $p->category_id }}" 
-                                data-sub="{{ $p->sub_category_id }}"
-                                data-brand="{{ $p->brand_id }}">
-                                {{ $p->item_code }} — {{ $p->item_name }} {{ $p->brand->name ?? '' }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="filter-group" style="display:flex; align-items:flex-end; gap:8px;">
-                    <button id="btnSearch" style="background:#0ea5e9; color:#fff; border:none; padding:8px 20px; border-radius:6px; font-weight:600; cursor:pointer;">🔍 Search</button>
-                    <button id="btnReset" style="background:#94a3b8; color:#fff; border:none; padding:8px 20px; border-radius:6px; font-weight:600; cursor:pointer;">↺ Reset</button>
-                </div>
+        </div>
+
+        {{-- KPI Cards --}}
+        <div class="kpi-row" id="kpiRow" style="display:none;">
+            <div class="kpi-card">
+                <div class="kpi-label">Total Invoices</div>
+                <div class="kpi-value" id="kpiCount">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Subtotal</div>
+                <div class="kpi-value" id="kpiSubtotal">0</div>
+            </div>
+            <div class="kpi-card kpi-net">
+                <div class="kpi-label">Net Amount</div>
+                <div class="kpi-value" id="kpiNet">0</div>
+            </div>
+            <div class="kpi-card kpi-paid">
+                <div class="kpi-label">Paid</div>
+                <div class="kpi-value" id="kpiPaid">0</div>
+            </div>
+            <div class="kpi-card kpi-due">
+                <div class="kpi-label">Due / Outstanding</div>
+                <div class="kpi-value" id="kpiDue">0</div>
+            </div>
+            <div class="kpi-card kpi-ret">
+                <div class="kpi-label">Total Returned</div>
+                <div class="kpi-value" id="kpiReturned">0</div>
             </div>
         </div>
 
@@ -394,6 +544,15 @@
             }
 
             function renderTable(data, totals) {
+                // KPI
+                document.getElementById('kpiCount').textContent = data.length;
+                document.getElementById('kpiSubtotal').textContent = 'Rs ' + fmt(totals.subtotal);
+                document.getElementById('kpiNet').textContent = 'Rs ' + fmt(totals.net);
+                document.getElementById('kpiPaid').textContent = 'Rs ' + fmt(totals.paid);
+                document.getElementById('kpiDue').textContent = 'Rs ' + fmt(totals.due);
+                document.getElementById('kpiReturned').textContent = 'Rs ' + fmt(totals.returned);
+                document.getElementById('kpiRow').style.display = '';
+
                 const start = document.getElementById('start_date').value;
                 const end = document.getElementById('end_date').value;
                 document.getElementById('rangeLabel').textContent = `${start} -TO- ${end}`;
@@ -604,12 +763,14 @@
                                 const o = new Option(c.customer_name, c.id);
                                 document.getElementById('filterCustomer').add(o);
                             });
+                            $('#filterCustomer').trigger('change.select2');
                         }
                         if (res.warehouses && document.getElementById('filterWarehouse').options.length === 1) {
                             res.warehouses.forEach(w => {
                                 const o = new Option(w.warehouse_name, w.id);
                                 document.getElementById('filterWarehouse').add(o);
                             });
+                            $('#filterWarehouse').trigger('change.select2');
                         }
 
                         lastData = res.data || [];
@@ -622,6 +783,7 @@
 
                         document.getElementById('tableWrap').style.display = '';
                         renderTable(lastData, {
+                            subtotal: res.grand_subtotal,
                             net: res.grand_net,
                             paid: res.grand_paid,
                             due: res.grand_due,
@@ -640,14 +802,14 @@
             document.getElementById('btnReset').addEventListener('click', function() {
                 document.getElementById('start_date').value = '';
                 document.getElementById('end_date').value = '';
-                document.getElementById('filterCustomer').value = 'all';
-                document.getElementById('filterWarehouse').value = 'all';
-                document.getElementById('filterStatus').value = 'all';
-                document.getElementById('filterCategory').value = 'all';
-                document.getElementById('filterSubCategory').value = 'all';
-                $('#filterBrand').val('all');
+                $('#filterCustomer').val('all').trigger('change.select2');
+                $('#filterWarehouse').val('all').trigger('change.select2');
+                $('#filterStatus').val('all').trigger('change.select2');
+                $('#filterCategory').val('all').trigger('change.select2');
+                $('#filterSubCategory').val('all').trigger('change.select2');
+                $('#filterBrand').val('all').trigger('change.select2');
+                $('#filterProduct').val('all').trigger('change.select2');
                 updateFilters();
-                $('#filterProduct').val('all').trigger('change');
 
                 document.getElementById('tableWrap').style.display = 'none';
                 document.getElementById('emptyState').style.display = '';

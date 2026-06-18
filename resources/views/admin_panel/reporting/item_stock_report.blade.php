@@ -135,100 +135,165 @@
         }
 
         .filter-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 16px 20px;
-            box-shadow: var(--card-shadow);
-            margin-bottom: 18px;
-        }
-
-        .filter-title {
-            font-size: .73rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .7px;
-            color: #475569;
-            margin-bottom: 12px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 7px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .filter-card .form-control,
-        .filter-card .form-select {
-            border-radius: 8px;
-            border: 1.5px solid #e2e8f0;
-            font-size: .86rem;
-            padding: 7px 11px;
-            height: auto;
-            transition: border-color .2s, box-shadow .2s;
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .filter-card .form-control:focus {
-            border-color: var(--c-primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: .62rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: .75px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
+            color: #1e293b;
             outline: none;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
         }
 
-        label.form-label {
-            font-size: .78rem;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 4px;
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
+            background: #fff;
         }
 
-        .btn-srp {
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: .85rem;
-            padding: 8px 18px;
-            cursor: pointer;
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+            margin-top: 14px;
+        }
+
+        .btn-filter-action {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            transition: box-shadow .2s, transform .1s;
+            justify-content: center;
+            gap: 4px;
+            border-radius: 6px;
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            min-width: 80px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
         }
 
-        .btn-srp:hover {
-            transform: translateY(-1px);
+        .btn-filter-action:active {
+            transform: scale(0.98);
         }
 
-        .btn-srp.blue {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        .btn-filter-search {
+            background: #0ea5e9;
             color: #fff;
         }
 
-        .btn-srp.blue:hover {
-            box-shadow: 0 4px 14px rgba(37, 99, 235, .38);
+        .btn-filter-search:hover {
+            background: #0284c7;
         }
 
-        .btn-srp.ghost {
-            background: #f1f5f9;
-            color: #475569;
-            border: 1.5px solid #e2e8f0;
-        }
-
-        .btn-srp.ghost:hover {
-            background: #e2e8f0;
-        }
-
-        .btn-srp.green {
-            background: linear-gradient(135deg, #16a34a, #15803d);
+        .btn-filter-reset {
+            background: #94a3b8;
             color: #fff;
         }
 
-        .btn-srp.green:hover {
-            box-shadow: 0 4px 14px rgba(22, 163, 74, .38);
+        .btn-filter-reset:hover {
+            background: #64748b;
         }
 
-        .btn-srp.purple {
-            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        .btn-pdf-summary {
+            background: #10b981;
             color: #fff;
         }
 
-        .btn-srp.purple:hover {
-            box-shadow: 0 4px 14px rgba(124, 58, 237, .38);
+        .btn-pdf-summary:hover {
+            background: #059669;
+        }
+
+        .btn-pdf-detail {
+            background: #7c3aed;
+            color: #fff;
+        }
+
+        .btn-pdf-detail:hover {
+            background: #6d28d9;
+        }
+
+        .btn-print-action {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .btn-print-action:hover {
+            background: #4f46e5;
+        }
+
+        /* Select2 Theme Overrides */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            height: 32px !important;
+            background-color: #f8fafc !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .8rem !important;
+            padding-left: 8px !important;
+            padding-right: 20px !important;
+            line-height: 30px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 6px !important;
+        }
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--open .select2-selection--single {
+            border-color: #0ea5e9 !important;
+            background-color: #fff !important;
         }
 
         .table-card {
@@ -584,13 +649,12 @@
                 </div>
 
                 <!-- Page Header -->
-                <div class="rpt-header">
+                <div class="rpt-header" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div>
-                        <h3><i class="fas fa-layer-group me-2"></i> Item Stock Report</h3>
-                        <p>Full inventory — stock by size mode, per-warehouse breakdown, movements &amp; valuations</p>
-                        <p style="opacity:.62;font-size:.76rem;margin-top:4px;">Generated: <span id="reportDate"></span></p>
+                        <h3 style="margin:0; font-size:1.35rem; font-weight:700; color:#1e293b;"><i class="fas fa-layer-group me-2"></i> Item Stock Report</h3>
+                        <p style="margin:4px 0 0; font-size:.85rem; color:#64748b;">Full inventory — stock by size mode, per-warehouse breakdown, movements &amp; valuations</p>
+                        <p style="opacity:.62;font-size:.76rem;margin-top:4px; margin-bottom:0;">Generated: <span id="reportDate"></span></p>
                     </div>
-                    <div class="rpt-header-icon"><i class="fas fa-chart-bar"></i></div>
                 </div>
 
                 <!-- KPI Cards -->
@@ -629,104 +693,93 @@
 
                 <!-- Filters -->
                 <div class="filter-card">
-                    <div class="filter-title"><i class="fas fa-filter"></i> Advanced Filters & Actions</div>
-                    <div class="row g-3">
-                        <!-- Unified Row 1: Products Attributes -->
-                        <div class="col-md-3">
-                            <label class="form-label">Category</label>
-                            <select id="filterCategory" class="form-control select2-global">
-                                <option value="all">All Category</option>
-                                @foreach($categories as $c)
-                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Sub-Category</label>
-                            <select id="filterSubCategory" class="form-control select2-global">
-                                <option value="all">All Sub-category</option>
-                                @foreach($subCategories as $sc)
-                                    <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Brand / Company</label>
-                            <select id="filterBrand" class="form-control select2-global">
-                                <option value="all">All Company</option>
-                                @foreach($brands as $b)
-                                    <option value="{{ $b->id }}">{{ $b->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Product</label>
-                            <select id="product_id" class="form-control select2-product">
-                                <option value="all">— All Products —</option>
-                                @foreach ($products as $prod)
-                                    <option value="{{ $prod->id }}" 
-                                        data-cat="{{ $prod->category_id }}" 
-                                        data-sub="{{ $prod->sub_category_id }}" 
-                                        data-brand="{{ $prod->brand_id }}">
-                                        {{ $prod->item_code }} — {{ $prod->item_name }} {{ $prod->brand->name ?? '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <!-- Unified Row 2: Parameters -->
-                        <div class="col-md-2">
-                            <label class="form-label">Warehouse</label>
-                            <select id="filterWarehouse" class="form-control select2-global">
-                                <option value="all">All Warehouses</option>
-                            </select>
-                        </div>
-                        @if($isSuperAdmin)
-                        <div class="col-md-2">
-                            <label class="form-label">Branch</label>
-                            <select id="filterBranch" class="form-control select2-global">
-                                <option value="all">— All Branches —</option>
-                                @foreach($branches as $b)
-                                    <option value="{{ $b->id }}">{{ $b->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @endif
-                        <div class="col-md-2">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" id="start_date" class="form-control">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">End Date</label>
-                            <input type="date" id="end_date" class="form-control">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Status</label>
-                            <select id="filterStatus" class="form-control">
-                                <option value="all">All Status</option>
-                                <option value="normal">✅ Normal</option>
-                                <option value="low_stock">⚠️ Low Stock</option>
-                                <option value="out_of_stock">❌ Out of Stock</option>
-                            </select>
+                    <div class="filter-inputs-container">
+                        <div class="filter-row">
+                            <div class="filter-group" style="flex: 1; min-width: 150px;">
+                                <label>Category</label>
+                                <select id="filterCategory" class="form-control select2-global">
+                                    <option value="all">All Category</option>
+                                    @foreach($categories as $c)
+                                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="filter-group" style="flex: 1; min-width: 150px;">
+                                <label>Sub-Category</label>
+                                <select id="filterSubCategory" class="form-control select2-global">
+                                    <option value="all">All Sub-category</option>
+                                    @foreach($subCategories as $sc)
+                                        <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="filter-group" style="flex: 1; min-width: 150px;">
+                                <label>Brand / Company</label>
+                                <select id="filterBrand" class="form-control select2-global">
+                                    <option value="all">All Company</option>
+                                    @foreach($brands as $b)
+                                        <option value="{{ $b->id }}">{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 350px;">
+                                <label>Product</label>
+                                <select id="product_id" class="form-control select2-product">
+                                    <option value="all">— All Products —</option>
+                                    @foreach ($products as $prod)
+                                        <option value="{{ $prod->id }}" 
+                                            data-cat="{{ $prod->category_id }}" 
+                                            data-sub="{{ $prod->sub_category_id }}" 
+                                            data-brand="{{ $prod->brand_id }}">
+                                            {{ $prod->item_code }} — {{ $prod->item_name }} {{ $prod->brand->name ?? '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="filter-group" style="flex: 1; min-width: 150px;">
+                                <label>Warehouse</label>
+                                <select id="filterWarehouse" class="form-control select2-global">
+                                    <option value="all">All Warehouses</option>
+                                </select>
+                            </div>
+                            @if($isSuperAdmin)
+                            <div class="filter-group" style="flex: 1; min-width: 150px;">
+                                <label>Branch</label>
+                                <select id="filterBranch" class="form-control select2-global">
+                                    <option value="all">— All Branches —</option>
+                                    @foreach($branches as $b)
+                                        <option value="{{ $b->id }}">{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
                         </div>
 
-                        <!-- Actions -->
-                        <div class="col-md-2 d-flex align-items-end gap-1 flex-wrap">
-                            <button type="button" id="btnSearch" class="btn-srp blue flex-fill" title="Generate Report">
-                                <i class="fas fa-sync-alt"></i> Search
-                            </button>
-                            <button type="button" id="btnReset" class="btn-srp ghost" title="Reset Filters">
-                                <i class="fas fa-undo"></i>
-                            </button>
-                            <button type="button" id="btnSummaryPdf" class="btn-srp green" title="Export Summary PDF (totals per product)">
-                                <i class="fas fa-file-pdf"></i> Summary
-                            </button>
-                            <button type="button" id="btnExportPdf" class="btn-srp" style="background:#7c3aed;color:#fff;" title="Export Detail PDF (full stock ledger per product)">
-                                <i class="fas fa-list-alt"></i> Detail
-                            </button>
-                            <button type="button" onclick="printReport()" class="btn-srp purple" title="Print View">
-                                <i class="fas fa-print"></i>
-                            </button>
+                        <div class="filter-row">
+                            <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+                                <label>Start Date</label>
+                                <input type="date" id="start_date" class="form-control">
+                            </div>
+                            <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+                                <label>End Date</label>
+                                <input type="date" id="end_date" class="form-control">
+                            </div>
+                            <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+                                <label>Status</label>
+                                <select id="filterStatus" class="form-control">
+                                    <option value="all">All Status</option>
+                                    <option value="normal">✅ Normal</option>
+                                    <option value="low_stock">⚠️ Low Stock</option>
+                                    <option value="out_of_stock">❌ Out of Stock</option>
+                                </select>
+                            </div>
+                            <div class="filter-group" style="flex-direction: row; gap: 6px; align-items: flex-end; min-width: 400px; margin-left: 10px; flex: 1.5;">
+                                <button type="button" class="btn-filter-action btn-filter-search" id="btnSearch" style="flex: 1;">🔍 Search</button>
+                                <button type="button" class="btn-filter-action btn-filter-reset" id="btnReset" style="flex: 1;">↺ Reset</button>
+                                <button type="button" id="btnSummaryPdf" class="btn-filter-action btn-pdf-summary" style="flex: 1.2;" title="Export Summary PDF (totals per product)"><i class="fas fa-file-pdf"></i> Summary PDF</button>
+                                <button type="button" id="btnExportPdf" class="btn-filter-action btn-pdf-detail" style="flex: 1.2;" title="Export Detail PDF (full stock ledger per product)"><i class="fas fa-list-alt"></i> Detail PDF</button>
+                                <button type="button" onclick="printReport()" class="btn-filter-action btn-print-action" style="flex: 1;" title="Print View">🖨 Print</button>
+                            </div>
                         </div>
                     </div>
                 </div>

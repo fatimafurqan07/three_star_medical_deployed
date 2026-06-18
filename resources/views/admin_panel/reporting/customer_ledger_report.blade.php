@@ -95,61 +95,141 @@
             border: 1px solid var(--border);
         }
 
-        /* ── Filter card ─────────────────────────────────────────── */
+        /* Filters */
         .filter-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 22px;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .filter-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
-            gap: 14px;
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
             align-items: flex-end;
         }
 
-        .fg label {
-            font-size: .73rem;
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: .62rem;
             font-weight: 700;
+            color: #475569;
             text-transform: uppercase;
-            letter-spacing: .5px;
-            color: var(--muted);
-            display: block;
-            margin-bottom: 5px;
+            letter-spacing: .75px;
         }
 
-        .fg select,
-        .fg input {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 12px;
-            font-size: .88rem;
-            color: var(--ink);
-            background: var(--bg);
+        .filter-group select,
+        .filter-group input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
+            color: #1e293b;
             outline: none;
-            transition: border-color .15s, background .15s;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
             box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
+            width: 100%;
         }
 
-        .fg select:focus,
-        .fg input:focus {
-            border-color: var(--brand);
-            background: var(--white);
-            box-shadow: 0 0 0 3px #ede9fe80;
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
+            background: #fff;
         }
 
-        .generate-btn-wrap {
-            padding-bottom: 0;
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+            margin-top: 14px;
         }
 
-        @media (max-width:768px) {
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
+        .btn-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 6px;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            min-width: 100px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-filter-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-filter-search {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-filter-search:hover {
+            background: #0284c7;
+        }
+
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
+        }
+
+        .btn-filter-reset:hover {
+            background: #64748b;
+        }
+
+        /* Select2 Theme Overrides */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            height: 32px !important;
+            background-color: #f8fafc !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .8rem !important;
+            padding-left: 8px !important;
+            padding-right: 20px !important;
+            line-height: 30px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 6px !important;
+        }
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--open .select2-selection--single {
+            border-color: #0ea5e9 !important;
+            background-color: #fff !important;
         }
 
         /* ── Loader ──────────────────────────────────────────────── */
@@ -530,76 +610,72 @@
 
         {{-- Filter Card --}}
         <div class="filter-card">
-            <div class="filter-grid" style="grid-template-columns: 2fr 1fr 1fr;">
-                <div class="fg">
-                    <label>Customer</label>
-                    <select id="sel_customer">
-                        <option value="">— Select Customer —</option>
-                        @foreach ($customers as $c)
-                            <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
-                        @endforeach
-                    </select>
+            <div class="filter-inputs-container">
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 350px;">
+                        <label>Customer</label>
+                        <select id="sel_customer" class="select2-product">
+                            <option value="">— Select Customer —</option>
+                            @foreach ($customers as $c)
+                                <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Start Date</label>
+                        <input type="date" id="sel_start">
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>End Date</label>
+                        <input type="date" id="sel_end">
+                    </div>
                 </div>
-                <div class="fg">
-                    <label>Start Date</label>
-                    <input type="date" id="sel_start">
-                </div>
-                <div class="fg">
-                    <label>End Date</label>
-                    <input type="date" id="sel_end">
-                </div>
-            </div>
-            <div class="filter-grid mt-3" style="grid-template-columns: 1fr 1fr 1fr 2fr auto;">
-                <div class="fg">
-                    <label>Category</label>
-                    <select id="sel_category">
-                        <option value="all">All Category</option>
-                        @foreach(App\Models\Category::orderBy('name')->get() as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Sub-Category</label>
-                    <select id="sel_subcategory">
-                        <option value="all">All Sub-category</option>
-                        @foreach(App\Models\Subcategory::orderBy('name')->get() as $sc)
-                            <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Company (Brand)</label>
-                    <select id="sel_brand">
-                        <option value="all">All Companies</option>
-                        @foreach(App\Models\Brand::orderBy('name')->get() as $b)
-                            <option value="{{ $b->id }}">{{ $b->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="fg">
-                    <label>Product</label>
-                    <select id="sel_product" class="select2-product">
-                        <option value="all">All Products</option>
-                        @foreach(App\Models\Product::orderBy('item_name')->get() as $p)
-                            <option value="{{ $p->id }}" 
-                                data-cat="{{ $p->category_id }}" 
-                                data-sub="{{ $p->sub_category_id }}" 
-                                data-brand="{{ $p->brand_id }}">
-                                {{ $p->item_code }} — {{ $p->item_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="fg generate-btn-wrap d-flex gap-2">
-                    <button class="btn-led btn-gen" id="btnGenerate"
-                        style="width:100%;justify-content:center;padding:9px 20px;">
-                        🔍 Generate
-                    </button>
-                    <button class="btn-led bg-light text-dark" id="btnResetFilters"
-                        style="padding:9px 15px; border:1px solid #ddd;" title="Reset Filters">
-                        🔄
-                    </button>
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Category</label>
+                        <select id="sel_category" class="select2-product">
+                            <option value="all">All Category</option>
+                            @foreach(App\Models\Category::orderBy('name')->get() as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Sub-Category</label>
+                        <select id="sel_subcategory" class="select2-product">
+                            <option value="all">All Sub-category</option>
+                            @foreach(App\Models\Subcategory::orderBy('name')->get() as $sc)
+                                <option value="{{ $sc->id }}" data-cat="{{ $sc->category_id }}">{{ $sc->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Company (Brand)</label>
+                        <select id="sel_brand" class="select2-product">
+                            <option value="all">All Companies</option>
+                            @foreach(App\Models\Brand::orderBy('name')->get() as $b)
+                                <option value="{{ $b->id }}">{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 350px;">
+                        <label>Product</label>
+                        <select id="sel_product" class="select2-product">
+                            <option value="all">All Products</option>
+                            @foreach(App\Models\Product::orderBy('item_name')->get() as $p)
+                                <option value="{{ $p->id }}" 
+                                    data-cat="{{ $p->category_id }}" 
+                                    data-sub="{{ $p->sub_category_id }}" 
+                                    data-brand="{{ $p->brand_id }}">
+                                    {{ $p->item_code }} — {{ $p->item_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex-direction: row; gap: 6px; align-items: flex-end; min-width: 200px; margin-left: 10px;">
+                        <button class="btn-filter-action btn-filter-search" id="btnGenerate" style="flex: 1;">🔍 Search</button>
+                        <button class="btn-filter-action btn-filter-reset" id="btnResetFilters" style="flex: 1;">↺ Reset</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -765,13 +841,12 @@
             });
 
             document.getElementById('btnResetFilters').addEventListener('click', function() {
-                document.getElementById('sel_customer').value = "";
-                document.getElementById('sel_category').value = "all";
-                document.getElementById('sel_subcategory').value = "all";
-                document.getElementById('sel_brand').value = "all";
-                $('#sel_product').val('all');
+                $('#sel_customer').val('').trigger('change.select2');
+                $('#sel_category').val('all').trigger('change.select2');
+                $('#sel_subcategory').val('all').trigger('change.select2');
+                $('#sel_brand').val('all').trigger('change.select2');
+                $('#sel_product').val('all').trigger('change.select2');
                 updateFilters();
-                $('#sel_product').trigger('change.select2');
                 document.getElementById('ledgerResult').style.display = 'none';
                 document.getElementById('exportBtns').style.display = 'none';
             });

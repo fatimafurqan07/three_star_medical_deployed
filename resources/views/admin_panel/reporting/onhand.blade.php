@@ -157,44 +157,67 @@
             margin-top: 2px;
         }
 
-        /* ── Filter row ────────────────────────────────────────────────── */
-        .filter-bar {
-            background: var(--white);
-            border: 1px solid var(--border);
+        /* Filter Row Styles */
+        .filter-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #e2e8f0;
             border-radius: 10px;
-            padding: 14px 18px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .filter-row {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: flex-end;
-            margin-bottom: 18px;
         }
 
-        .filter-bar input,
-        .filter-bar select {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 7px 10px;
-            font-size: .85rem;
-            color: var(--ink);
-            background: var(--bg);
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: .62rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: .75px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
+            color: #1e293b;
             outline: none;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
             min-width: 170px;
         }
 
-        .filter-bar input:focus,
-        .filter-bar select:focus {
-            border-color: var(--brand);
-            background: var(--white);
-        }
-
-        .filter-bar label {
-            font-size: .75rem;
-            font-weight: 600;
-            color: var(--muted);
-            text-transform: uppercase;
-            display: block;
-            margin-bottom: 4px;
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
+            background: #fff;
         }
 
         .search-box {
@@ -211,10 +234,48 @@
             left: 9px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--muted);
+            color: #64748b;
             width: 15px;
             height: 15px;
             pointer-events: none;
+        }
+
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+        }
+
+        .btn-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 6px;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            min-width: 100px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-filter-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
+        }
+
+        .btn-filter-reset:hover {
+            background: #64748b;
         }
 
         /* ── Table card ────────────────────────────────────────────────── */
@@ -520,40 +581,51 @@
         </div>
 
         {{-- Filter Bar --}}
-        <div class="filter-bar">
-            <div>
-                <label>Search</label>
-                <div class="search-box">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                    </svg>
-                    <input type="text" id="searchInput" placeholder="Code or name…">
+        <div class="filter-card">
+            <div class="filter-inputs-container">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Search</label>
+                        <div class="search-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                            </svg>
+                            <input type="text" id="searchInput" placeholder="Code or name…">
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="filterStatus">
+                            <option value="all">All Status</option>
+                            <option value="ok">In Stock</option>
+                            <option value="low">Low Stock</option>
+                            <option value="out">Out of Stock</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Mode</label>
+                        <select id="filterMode">
+                            <option value="all">All Modes</option>
+                            <option value="by_pieces">By Pieces</option>
+                            <option value="by_cartons">By Cartons</option>
+                            <option value="by_size">By Size (m²)</option>
+                        </select>
+                    </div>
+                    <div style="margin-left:auto; padding-bottom: 6px;">
+                        <span id="rowCount" style="font-size:.82rem;color:var(--muted);">
+                            Showing <strong id="shownCount">{{ count($rows) }}</strong> of <strong>{{ count($rows) }}</strong> products
+                        </span>
+                    </div>
                 </div>
             </div>
-            <div>
-                <label>Status</label>
-                <select id="filterStatus">
-                    <option value="all">All Status</option>
-                    <option value="ok">In Stock</option>
-                    <option value="low">Low Stock</option>
-                    <option value="out">Out of Stock</option>
-                </select>
-            </div>
-            <div>
-                <label>Mode</label>
-                <select id="filterMode">
-                    <option value="all">All Modes</option>
-                    <option value="by_pieces">By Pieces</option>
-                    <option value="by_cartons">By Cartons</option>
-                    <option value="by_size">By Size (m²)</option>
-                </select>
-            </div>
-            <div style="margin-left:auto;display:flex;align-items:flex-end;">
-                <span id="rowCount" style="font-size:.82rem;color:var(--muted);padding:8px 0;">
-                    Showing <strong id="shownCount">{{ count($rows) }}</strong> of <strong>{{ count($rows) }}</strong>
-                    products
-                </span>
+            <div class="filter-buttons-col">
+                <button type="button" id="btnResetFilters" class="btn-filter-action btn-filter-reset">
+                    <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+                    </svg>
+                    Reset
+                </button>
             </div>
         </div>
 
@@ -749,6 +821,16 @@
             document.getElementById('searchInput')?.addEventListener('input', applyFilters);
             document.getElementById('filterStatus')?.addEventListener('change', applyFilters);
             document.getElementById('filterMode')?.addEventListener('change', applyFilters);
+
+            document.getElementById('btnResetFilters')?.addEventListener('click', function() {
+                const searchInput = document.getElementById('searchInput');
+                const filterStatus = document.getElementById('filterStatus');
+                const filterMode = document.getElementById('filterMode');
+                if (searchInput) searchInput.value = '';
+                if (filterStatus) filterStatus.value = 'all';
+                if (filterMode) filterMode.value = 'all';
+                applyFilters();
+            });
 
             // CSV Export
             document.getElementById('btnCsv')?.addEventListener('click', function() {

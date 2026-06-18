@@ -87,64 +87,141 @@
         .stat-card.success { border-top: 4px solid var(--c-success); }
         .stat-card.warning { border-top: 4px solid var(--c-warning); }
 
-        .filter-section {
+        /* Filter Row Styles */
+        .filter-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: #fff;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: var(--card-shadow);
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px 20px;
             margin-bottom: 30px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .filter-inputs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .filter-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 12px;
             align-items: flex-end;
         }
 
-        .filter-item {
-            flex: 1;
-            min-width: 180px;
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
-        .form-label {
+        .filter-group label {
+            font-size: .62rem;
             font-weight: 700;
-            font-size: 0.85rem;
-            color: #334155;
-            margin-bottom: 8px;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: .75px;
         }
 
-        .custom-input {
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
-            padding: 10px 15px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .custom-input:focus {
-            border-color: var(--c-accent);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        .filter-group select,
+        .filter-group input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .8rem;
+            color: #1e293b;
             outline: none;
+            background: #f8fafc;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background-color 0.2s;
+            width: 100%;
         }
 
-        .btn-global {
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-weight: 700;
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0ea5e9;
+            background: #fff;
+        }
+
+        .filter-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+            justify-content: center;
+            align-self: flex-end;
+        }
+
+        .btn-filter-action {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.2s;
-            border: none;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 6px;
+            font-size: .8rem;
+            font-weight: 600;
             cursor: pointer;
+            padding: 6px 12px;
+            min-width: 100px;
+            height: 32px;
+            border: none;
+            transition: background-color 0.2s, transform 0.1s;
         }
 
-        .btn-search { background: var(--c-accent); color: #fff; }
-        .btn-search:hover { background: #2563eb; transform: scale(1.02); }
+        .btn-filter-action:active {
+            transform: scale(0.98);
+        }
 
-        .btn-reset { background: #f1f5f9; color: #475569; }
-        .btn-reset:hover { background: #e2e8f0; }
+        .btn-filter-search {
+            background: #0ea5e9;
+            color: #fff;
+        }
+
+        .btn-filter-search:hover {
+            background: #0284c7;
+        }
+
+        .btn-filter-reset {
+            background: #94a3b8;
+            color: #fff;
+        }
+
+        .btn-filter-reset:hover {
+            background: #64748b;
+        }
+
+        /* Select2 Theme Overrides */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            height: 32px !important;
+            background-color: #f8fafc !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .8rem !important;
+            padding-left: 8px !important;
+            padding-right: 20px !important;
+            line-height: 30px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 6px !important;
+        }
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--open .select2-selection--single {
+            border-color: #0ea5e9 !important;
+            background-color: #fff !important;
+        }
 
         .table-container {
             background: #fff;
@@ -248,29 +325,29 @@
             </div>
         </div>
 
-        <div class="filter-section">
-            <form id="filterForm">
+        <form id="filterForm" class="filter-card">
+            <div class="filter-inputs-container">
                 <div class="filter-row">
-                    <div class="filter-item">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" name="start_date" id="start_date" class="form-control custom-input" value="{{ date('Y-m-01') }}">
+                    <div class="filter-group" style="flex: 1; min-width: 130px;">
+                        <label>Start Date</label>
+                        <input type="date" name="start_date" id="start_date" value="{{ date('Y-m-01') }}">
                     </div>
-                    <div class="filter-item">
-                        <label class="form-label">End Date</label>
-                        <input type="date" name="end_date" id="end_date" class="form-control custom-input" value="{{ date('Y-m-d') }}">
+                    <div class="filter-group" style="flex: 1; min-width: 130px;">
+                        <label>End Date</label>
+                        <input type="date" name="end_date" id="end_date" value="{{ date('Y-m-d') }}">
                     </div>
-                    <div class="filter-item">
-                        <label class="form-label">Warehouse</label>
-                        <select name="warehouse_id" id="warehouse_id" class="form-select custom-input">
+                    <div class="filter-group" style="flex: 1.2; min-width: 160px;">
+                        <label>Warehouse</label>
+                        <select name="warehouse_id" id="warehouse_id" class="select2">
                             <option value="all">All Warehouses</option>
                             @foreach($warehouses as $wh)
                                 <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item">
-                        <label class="form-label">Company (Brand)</label>
-                        <select name="brand_id" id="brand_id" class="form-select custom-input">
+                    <div class="filter-group" style="flex: 1.2; min-width: 160px;">
+                        <label>Company (Brand)</label>
+                        <select name="brand_id" id="brand_id" class="select2">
                             <option value="all">All Companies</option>
                             @foreach($brands as $b)
                                 <option value="{{ $b->id }}">{{ $b->name }}</option>
@@ -279,45 +356,51 @@
                     </div>
                 </div>
 
-                <div class="filter-row mt-3">
-                    <div class="filter-item">
-                        <label class="form-label">Category</label>
-                        <select name="category_id" id="category_id" class="form-select custom-input">
+                <div class="filter-row">
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Category</label>
+                        <select name="category_id" id="category_id" class="select2">
                             <option value="all">All Categories</option>
                             @foreach($categories as $c)
                                 <option value="{{ $c->id }}">{{ $c->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item">
-                        <label class="form-label">Sub-Category</label>
-                        <select name="sub_category_id" id="sub_category_id" class="form-select custom-input">
+                    <div class="filter-group" style="flex: 1; min-width: 150px;">
+                        <label>Sub-Category</label>
+                        <select name="sub_category_id" id="sub_category_id" class="select2">
                             <option value="all">All Sub-Categories</option>
                             @foreach($subCategories as $sc)
                                 <option value="{{ $sc->id }}">{{ $sc->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item" style="flex: 2;">
-                        <label class="form-label">Product</label>
-                        <select name="product_id" id="product_id" class="form-select custom-input select2">
+                    <div class="filter-group" style="flex: 2; min-width: 250px;">
+                        <label>Product</label>
+                        <select name="product_id" id="product_id" class="select2">
                             <option value="all">All Products</option>
                             @foreach($products as $p)
                                 <option value="{{ $p->id }}">{{ $p->item_code }} - {{ $p->item_name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn-global btn-search">
-                            <i class="fas fa-sync-alt"></i> Update Report
-                        </button>
-                        <button type="button" id="btnReset" class="btn-global btn-reset">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+            <div class="filter-buttons-col">
+                <button type="submit" class="btn-filter-action btn-filter-search">
+                    <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Search
+                </button>
+                <button type="button" id="btnReset" class="btn-filter-action btn-filter-reset">
+                    <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+                    </svg>
+                    Reset
+                </button>
+            </div>
+        </form>
 
         <div class="table-container">
             <div class="table-responsive">

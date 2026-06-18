@@ -755,7 +755,7 @@ class ReportingController extends Controller
         $purchaseIds = $purchases->pluck('id')->toArray();
 
         // Items keyed by purchase_id
-        $itemsMap = DB::table('purchase_items')
+        $itemsQuery = DB::table('purchase_items')
             ->join('products', 'purchase_items.product_id', '=', 'products.id')
             ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
             ->leftJoin('product_uoms', 'purchase_items.uom_id', '=', 'product_uoms.id')
@@ -781,9 +781,22 @@ class ReportingController extends Controller
                 'products.hs_code',
                 'product_uoms.name as table_uom_name',
                 'purchase_items.uom_factor'
-            )
-            ->get()
-            ->groupBy('purchase_id');
+            );
+
+        if ($catId && $catId !== 'all') {
+            $itemsQuery->where('products.category_id', $catId);
+        }
+        if ($subId && $subId !== 'all') {
+            $itemsQuery->where('products.sub_category_id', $subId);
+        }
+        if ($brandId && $brandId !== 'all') {
+            $itemsQuery->where('products.brand_id', $brandId);
+        }
+        if ($productId && $productId !== 'all') {
+            $itemsQuery->where('products.id', $productId);
+        }
+
+        $itemsMap = $itemsQuery->get()->groupBy('purchase_id');
 
         // Returns keyed by purchase_id
         $returnsMap = DB::table('purchase_returns')
@@ -945,7 +958,7 @@ class ReportingController extends Controller
         $saleIds = $sales->pluck('id')->toArray();
 
         // Sale items keyed by sale_id (with warehouse info)
-        $itemsMap = DB::table('sale_items')
+        $itemsQuery = DB::table('sale_items')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
             ->leftJoin('units', 'products.unit_id', '=', 'units.id')
@@ -978,9 +991,22 @@ class ReportingController extends Controller
                 'sale_items.discount_amount',
                 'products.hs_code',
                 'warehouses.warehouse_name'
-            )
-            ->get()
-            ->groupBy('sale_id');
+            );
+
+        if ($catId && $catId !== 'all') {
+            $itemsQuery->where('products.category_id', $catId);
+        }
+        if ($subId && $subId !== 'all') {
+            $itemsQuery->where('products.sub_category_id', $subId);
+        }
+        if ($brandId && $brandId !== 'all') {
+            $itemsQuery->where('products.brand_id', $brandId);
+        }
+        if ($productId && $productId !== 'all') {
+            $itemsQuery->where('products.id', $productId);
+        }
+
+        $itemsMap = $itemsQuery->get()->groupBy('sale_id');
 
         // Sale returns keyed by sale_id
         $returnsMap = DB::table('sale_returns')
@@ -995,6 +1021,7 @@ class ReportingController extends Controller
             ->keyBy('sale_id');
 
         $rows = [];
+        $grandSubtotal = 0;
         $grandNet = 0;
         $grandPaid = 0;
         $grandReturned = 0;
@@ -1010,6 +1037,7 @@ class ReportingController extends Controller
             $netPaid = max(0, $cashReceived - $changeGiven);
             $netDue = max(0, (float) $s->total_net - $netPaid);
 
+            $grandSubtotal += (float) ($s->total_bill_amount ?? 0);
             $grandNet += (float) $s->total_net;
             $grandPaid += $netPaid;
             $grandReturned += $totalReturned;
@@ -1092,6 +1120,7 @@ class ReportingController extends Controller
             'data' => $rows,
             'customers' => $customers,
             'warehouses' => $warehouses,
+            'grand_subtotal' => $grandSubtotal,
             'grand_net' => $grandNet,
             'grand_paid' => $grandPaid,
             'grand_due' => $grandNet - $grandPaid,
@@ -2677,12 +2706,27 @@ class ReportingController extends Controller
 
             $rows = $query->orderBy('created_at', 'desc')->get();
 
-            $data = $rows->map(function ($r) {
+            $data = $rows->map(function ($r) use ($request, $brandId, $productId) {
                 $totalPieces = 0;
                 $whBreakdown = [];
                 $itemsDetail = [];
 
-                foreach ($r->items as $item) {
+                $filteredItems = $r->items;
+                if ($productId && $productId !== 'all') {
+                    $filteredItems = $filteredItems->filter(fn($item) => $item->product_id == $productId);
+                } else {
+                    if ($request->category_id && $request->category_id !== 'all') {
+                        $filteredItems = $filteredItems->filter(fn($item) => $item->product?->category_id == $request->category_id);
+                    }
+                    if ($request->sub_category_id && $request->sub_category_id !== 'all') {
+                        $filteredItems = $filteredItems->filter(fn($item) => $item->product?->sub_category_id == $request->sub_category_id);
+                    }
+                    if ($brandId && $brandId !== 'all') {
+                        $filteredItems = $filteredItems->filter(fn($item) => $item->product?->brand_id == $brandId);
+                    }
+                }
+
+                foreach ($filteredItems as $item) {
                     $pcs     = (float) ($item->total_pieces ?? ($item->qty * ($item->product->pieces_per_box ?? 1)));
                     $totalPieces += $pcs;
 
@@ -2726,7 +2770,7 @@ class ReportingController extends Controller
                     'customer_phone'=> $r->customer->mobile ?? '-',
                     'total_pieces' => $totalPieces,
                     'warehouses'   => implode(', ', $whSummary),
-                    'items_count'  => count($r->items),
+                    'items_count'  => count($filteredItems),
                     'items_detail' => $itemsDetail,
                 ];
             });
