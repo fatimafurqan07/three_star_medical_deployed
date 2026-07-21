@@ -8,19 +8,28 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('cdrs', function (Blueprint $table) {
+        if (Schema::hasTable('cdrs')) {
+    Schema::table('cdrs', function (Blueprint $table) {
             if (!Schema::hasColumn('cdrs', 'branch_id')) {
-                $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('id');
+
+                if (!Schema::hasColumn('cdrs', 'branch_id')) {
+
+                    $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('id');
+
+                }
             }
-        });
+            });
+}
     }
 
     public function down(): void
     {
-        Schema::table('cdrs', function (Blueprint $table) {
+        if (Schema::hasTable('cdrs')) {
+    Schema::table('cdrs', function (Blueprint $table) {
             if (Schema::hasColumn('cdrs', 'branch_id')) {
                 $table->dropColumn('branch_id');
             }
-        });
+            });
+}
     }
 };

@@ -50,8 +50,8 @@ class ReportingController extends Controller
                 'products.item_name',
                 'products.size_mode',
                 'products.pieces_per_box',
-                'products.total_m2',
-                'products.price_per_m2',
+                DB::raw('0.00 as total_m2'),
+                DB::raw('0.00 as price_per_m2'),
                 'products.sale_price_per_box',
                 'products.sale_price_per_piece',
                 'products.purchase_price_per_piece',
@@ -205,6 +205,8 @@ class ReportingController extends Controller
 
     public function item_stock_report()
     {
+        Warehouse::ensureShopWarehousesExists();
+
         $products    = Product::orderBy('item_name')->get();
         $categories  = \App\Models\Category::orderBy('name')->get();
         $subCategories = \App\Models\Subcategory::orderBy('name')->get();
@@ -215,14 +217,23 @@ class ReportingController extends Controller
             ? DB::table('branches')->select('id', 'name')->orderBy('name')->get()
             : collect();
 
+        $branchId = $this->getBranchId();
+        // All locations (shops + warehouses) for the filter dropdown
+        $allLocations = Warehouse::when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderByRaw("FIELD(type,'shop','warehouse')")
+            ->orderBy('warehouse_name')
+            ->get(['id', 'warehouse_name', 'type']);
+
         return view('admin_panel.reporting.item_stock_report',
-            compact('products', 'isSuperAdmin', 'branches', 'categories', 'subCategories', 'brands'));
+            compact('products', 'isSuperAdmin', 'branches', 'categories', 'subCategories', 'brands', 'allLocations'));
     }
 
     // AJAX endpoint to fetch report rows
     public function fetchItemStock(Request $request)
     {           
         try {
+            Warehouse::ensureShopWarehousesExists();
+
             $start        = $request->get('start_date');
             $end          = $request->get('end_date');
             $catId        = $request->get('category_id', 'all');
@@ -252,15 +263,17 @@ class ReportingController extends Controller
             //    (warehouse_stocks is the single source of truth for current balance)
             $whStockQuery = DB::table('warehouse_stocks')
                 ->join('warehouses', 'warehouses.id', '=', 'warehouse_stocks.warehouse_id')
+                ->leftJoin('branches', 'branches.id', '=', 'warehouses.branch_id')
                 ->whereIn('warehouse_stocks.product_id', $productIds)
                 ->select(
                     'warehouse_stocks.product_id',
                     'warehouse_stocks.warehouse_id',
                     'warehouses.warehouse_name',
+                    'branches.name as branch_name',
                     DB::raw('SUM(warehouse_stocks.total_pieces) as total_pieces'),
                     DB::raw('COALESCE(warehouses.branch_id, 0) as branch_id')
                 )
-                ->groupBy('warehouse_stocks.product_id', 'warehouse_stocks.warehouse_id', 'warehouses.warehouse_name', 'warehouses.branch_id')
+                ->groupBy('warehouse_stocks.product_id', 'warehouse_stocks.warehouse_id', 'warehouses.warehouse_name', 'warehouses.branch_id', 'branches.name')
                 ->having('total_pieces', '>', 0);
 
             if ($warehouseId) $whStockQuery->where('warehouse_stocks.warehouse_id', $warehouseId);
@@ -395,6 +408,7 @@ class ReportingController extends Controller
                 // Warehouse breakdown
                 $whArrayList = $whGroup->map(fn($w) => [
                     'warehouse_name' => $w->warehouse_name,
+                    'branch_name'    => $w->branch_name,
                     'display'        => floor($w->total_pieces / $ppb) . '.' . ((int)$w->total_pieces % $ppb) . ' (' . (int)$w->total_pieces . ' pcs)',
                 ])->values()->toArray();
 
@@ -403,6 +417,7 @@ class ReportingController extends Controller
                     'item_code'                => $p->item_code,
                     'item_name'                => ($p->item_name ?? '') . ' ' . ($p->brand?->name ?? ''),
                     'brand'                    => $p->brand?->name ?? '-',
+                    'branch_names'             => $whGroup->pluck('branch_name')->filter()->unique()->implode(', ') ?: '-',
                     'category'                 => $p->category_relation?->name ?? '-',
                     'sub_category'             => $p->sub_category_relation?->name ?? '-',
                     'unit'                     => $p->unit?->name ?? '-',
@@ -476,7 +491,11 @@ class ReportingController extends Controller
                 'grand_total'    => round($gStockVal, 2),
                 'grand_purchase' => round($gPurAmt, 2),
                 'grand_sale'     => round($gSaleAmt, 2),
-                'warehouses'     => Warehouse::select('id', 'warehouse_name')->get(),
+                'warehouses'     => Warehouse::when($branchId, fn($q) => $q->where('branch_id', $branchId))
+                    ->orderByRaw("FIELD(type,'shop','warehouse')")
+                    ->orderBy('warehouse_name')
+                    ->select('id', 'warehouse_name', 'type')
+                    ->get(),
                 'ledger_data'    => $ledgerData,
             ]);
 
@@ -1521,8 +1540,8 @@ class ReportingController extends Controller
                 products.purchase_price_per_piece,
                 products.purchase_price_per_box,
                 products.pieces_per_box,
-                products.price_per_m2,
-                products.total_m2,
+                0.00 as price_per_m2,
+                0.00 as total_m2,
                 SUM(sale_items.total_pieces) as total_pieces_sold,
                 SUM(sale_items.qty)          as qty_sold,
                 SUM(sale_items.total)        as sale_revenue
@@ -1534,9 +1553,7 @@ class ReportingController extends Controller
                 'products.size_mode',
                 'products.purchase_price_per_piece',
                 'products.purchase_price_per_box',
-                'products.pieces_per_box',
-                'products.price_per_m2',
-                'products.total_m2'
+                'products.pieces_per_box'
             )
             ->get();
 
@@ -1715,12 +1732,20 @@ class ReportingController extends Controller
 
     public function warehouse_report()
     {
+        \App\Models\Warehouse::ensureShopWarehousesExists();
         $branchId = $this->getBranchId();
-        $warehouses = DB::table('warehouses')
+
+        $shops = Warehouse::where('type', 'shop')
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->orderBy('warehouse_name')
             ->get();
-        return view('admin_panel.reporting.warehouse_report', compact('warehouses'));
+
+        $warehouses = Warehouse::where('type', 'warehouse')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderBy('warehouse_name')
+            ->get();
+
+        return view('admin_panel.reporting.warehouse_report', compact('shops', 'warehouses'));
     }
 
     public function fetchWarehouseReport(Request $request)
@@ -2790,8 +2815,20 @@ class ReportingController extends Controller
 
     public function product_ledger_report()
     {
+        \App\Models\Warehouse::ensureShopWarehousesExists();
         $products    = \App\Models\Product::orderBy('item_name')->get();
-        $warehouses  = \App\Models\Warehouse::orderBy('warehouse_name')->get();
+        $branchId = $this->getBranchId();
+
+        $shops = Warehouse::where('type', 'shop')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderBy('warehouse_name')
+            ->get();
+
+        $warehouses = Warehouse::where('type', 'warehouse')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderBy('warehouse_name')
+            ->get();
+
         $categories  = \App\Models\Category::orderBy('name')->get();
         $subCategories = \App\Models\Subcategory::orderBy('name')->get();
         $brands      = \App\Models\Brand::orderBy('name')->get();
@@ -2802,7 +2839,7 @@ class ReportingController extends Controller
             : collect();
 
         return view('admin_panel.reporting.product_ledger_report', 
-            compact('products', 'warehouses', 'categories', 'subCategories', 'brands', 'isSuperAdmin', 'branches'));
+            compact('products', 'shops', 'warehouses', 'categories', 'subCategories', 'brands', 'isSuperAdmin', 'branches'));
     }
 
     public function fetchProductLedger(\Illuminate\Http\Request $request)

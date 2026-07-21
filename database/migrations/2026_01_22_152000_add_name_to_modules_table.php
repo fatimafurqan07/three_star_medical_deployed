@@ -12,9 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasColumn('modules', 'name')) {
-            Schema::table('modules', function (Blueprint $table) {
-                $table->string('name')->unique()->after('id');
-            });
+            if (Schema::hasTable('modules')) {
+    Schema::table('modules', function (Blueprint $table) {
+
+                if (!Schema::hasColumn('modules', 'name')) {
+
+                    $table->string('name')->unique()->after('id');
+
+                }
+                });
+}
         }
     }
 
@@ -24,9 +31,11 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasColumn('modules', 'name')) {
-            Schema::table('modules', function (Blueprint $table) {
+            if (Schema::hasTable('modules')) {
+    Schema::table('modules', function (Blueprint $table) {
                 $table->dropColumn('name');
-            });
+                });
+}
         }
     }
 };

@@ -14,16 +14,25 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
+        // Truncate existing categories and subcategories safely
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        Subcategory::truncate();
+        Category::truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
         $data = [
-            'Electronics' => ['Fan', 'ceiling  Fan','Pedestal  Fan' , 'Fridge', 'Air-Condition(AC)', 'Washing Machine', 'Microwave Oven'],
-            'machine' => ['Drill Machine', 'Grinder', 'Lathe Machine', 'Milling Machine', 'Shaper Machine'],
-            'Tools' => ['Hammer', 'Screwdriver', 'Wrench', 'Pliers', 'Tape Measure'],
-            'Plumbing' => ['Pipe', 'Faucet', 'Valve', 'Toilet', 'Sink'],
-            'Hardware' => ['Nails', 'Screws', 'Bolts', 'Hinges', 'Brackets'],
-            'Electrical' => ['Light', 'Switch', 'Wire', 'Cable'],
-            'Automotive' => ['Engine Oil', 'Brake Pads', 'Tires', 'Batteries', 'Filters'],
-
-
+            'BIOCHEMISTRY KITS' => ['ATLAS', 'BIORESEARCH', 'BIOSCIEN', 'CRESCENT', 'DIAGAST', 'HELENA', 'LAB KITS', 'OTHERS', 'SBIO'],
+            'BLOOD COLLECTION' => ['BIO-VAC', 'XINLE', 'YBK'],
+            'CULTURE MEDIA' => ['SBIO'],
+            'DISC' => ['SESITIVITY DISC'],
+            'DISPOSSABLE' => ['BLOOD BAG', 'GLASS WARE', 'MISC', 'MISCLINEOUS', 'NEEDLES', 'PLASTIC', 'PLASTIC WARE'],
+            'EQUIPMENT' => ['MACHINES'],
+            'INSTRUMENT' => ['ALERE', 'EQUIPMENT'],
+            'PIPETTE' => ['MICRO PIPETTE'],
+            'RAPID DEVICES' => ['ABBOTT', 'HEALGEN', 'OTHER', 'RIGHTSIGN'],
+            'REAGENTS' => ['ALERE', 'CONTROLS', 'PROLYTE', 'SYSMEX'],
+            'STAINS' => ['DIACHEM'],
+            'URINE STRIPS' => ['ABBOTT', 'DFI', 'HEALGEN', 'ROCHE'],
         ];
 
         foreach ($data as $categoryName => $subcategories) {

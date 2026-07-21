@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('branches', function (Blueprint $table) {
-            $table->string('address')->nullable()->change();
-            $table->string('number')->nullable()->change();
-        });
+        if (Schema::hasTable('branches')) {
+    Schema::table('branches', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('branches', 'address')) {
+
+                $table->string('address')->nullable()->change();
+
+            }
+
+            if (!Schema::hasColumn('branches', 'number')) {
+
+                $table->string('number')->nullable()->change();
+
+            }
+            });
+}
     }
 
     /**
@@ -22,9 +34,21 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('branches', function (Blueprint $table) {
-            $table->string('address')->nullable(false)->change();
-            $table->string('number')->nullable(false)->change();
-        });
+        if (Schema::hasTable('branches')) {
+    Schema::table('branches', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('branches', 'address')) {
+
+                $table->string('address')->nullable(false)->change();
+
+            }
+
+            if (!Schema::hasColumn('branches', 'number')) {
+
+                $table->string('number')->nullable(false)->change();
+
+            }
+            });
+}
     }
 };

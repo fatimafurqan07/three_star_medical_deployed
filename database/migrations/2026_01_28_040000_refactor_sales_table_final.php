@@ -17,19 +17,24 @@ return new class extends Migration
         if (Schema::hasColumn('sales', 'customer') && !Schema::hasColumn('sales', 'customer_id')) {
             // Check if we can rename directly or need to create new and copy
             // MySQL usually supports RENAME COLUMN
-            Schema::table('sales', function (Blueprint $table) {
+            if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
                 $table->renameColumn('customer', 'customer_id');
-            });
+                });
+}
         } elseif (Schema::hasColumn('sales', 'customer') && Schema::hasColumn('sales', 'customer_id')) {
             // If both exist (e.g. from previous migration), transfer data and drop old
             DB::statement('UPDATE sales SET customer_id = customer WHERE customer_id IS NULL');
-            Schema::table('sales', function (Blueprint $table) {
+            if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
                 $table->dropColumn('customer');
-            });
+                });
+}
         }
 
         // 2. Drop extra columns
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $columnsToDrop = [
                 'sub_customer', 'filer_type', 'address', 'tel', 'remarks', 'quantity',
                 'sub_total1', 'sub_total2', 
@@ -48,7 +53,8 @@ return new class extends Migration
                     $table->dropColumn($col);
                 }
             }
-        });
+            });
+}
     }
 
     /**
@@ -56,11 +62,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             if (Schema::hasColumn('sales', 'customer_id')) {
                 $table->renameColumn('customer_id', 'customer');
             }
             // We won't restore all dropped columns as they were "extra" and likely unused or calculated
-        });
+            });
+}
     }
 };

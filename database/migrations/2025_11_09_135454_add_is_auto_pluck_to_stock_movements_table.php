@@ -11,13 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('stock_movements', function (Blueprint $table) {
+        if (Schema::hasTable('stock_movements')) {
+    Schema::table('stock_movements', function (Blueprint $table) {
             //
             if (!Schema::hasColumn('stock_movements', 'is_auto_pluck')) {
-                $table->tinyInteger('is_auto_pluck')->default(0)->after('ref_id');
+
+                if (!Schema::hasColumn('stock_movements', 'is_auto_pluck')) {
+
+                    $table->tinyInteger('is_auto_pluck')->default(0)->after('ref_id');
+
+                }
 
             }
-        });
+            });
+}
     }
 
     /**
@@ -25,11 +32,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('stock_movements', function (Blueprint $table) {
+        if (Schema::hasTable('stock_movements')) {
+    Schema::table('stock_movements', function (Blueprint $table) {
              if (Schema::hasColumn('stock_movements', 'is_auto_pluck')) {
                 $table->dropColumn('is_auto_pluck');
             }
             //
-        });
+            });
+}
     }
 };

@@ -12,15 +12,29 @@ return new class extends Migration
     public function up(): void
     {
         if (! Schema::hasColumn('warehouses', 'branch_id')) {
-            Schema::table('warehouses', function (Blueprint $table) {
-                $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('id');
-            });
+            if (Schema::hasTable('warehouses')) {
+    Schema::table('warehouses', function (Blueprint $table) {
+
+                if (!Schema::hasColumn('warehouses', 'branch_id')) {
+
+                    $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('id');
+
+                }
+                });
+}
         }
 
         if (! Schema::hasColumn('warehouse_stocks', 'branch_id')) {
-            Schema::table('warehouse_stocks', function (Blueprint $table) {
-                $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('warehouse_id');
-            });
+            if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
+
+                if (!Schema::hasColumn('warehouse_stocks', 'branch_id')) {
+
+                    $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('warehouse_id');
+
+                }
+                });
+}
         }
     }
 
@@ -29,16 +43,20 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('warehouses', function (Blueprint $table) {
+        if (Schema::hasTable('warehouses')) {
+    Schema::table('warehouses', function (Blueprint $table) {
             if (Schema::hasColumn('warehouses', 'branch_id')) {
                 $table->dropColumn('branch_id');
             }
-        });
+            });
+}
 
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
             if (Schema::hasColumn('warehouse_stocks', 'branch_id')) {
                 $table->dropColumn('branch_id');
             }
-        });
+            });
+}
     }
 };

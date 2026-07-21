@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('delivery_return_note_items', function (Blueprint $table) {
-            $table->unsignedBigInteger('batch_id')->nullable()->after('product_id');
-        });
+        if (Schema::hasTable('delivery_return_note_items')) {
+    Schema::table('delivery_return_note_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('delivery_return_note_items', 'batch_id')) {
+
+                $table->unsignedBigInteger('batch_id')->nullable()->after('product_id');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('delivery_return_note_items', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_return_note_items')) {
+    Schema::table('delivery_return_note_items', function (Blueprint $table) {
             $table->dropColumn('batch_id');
-        });
+            });
+}
     }
 };

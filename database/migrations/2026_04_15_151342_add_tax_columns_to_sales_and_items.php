@@ -11,15 +11,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->decimal('total_inc_tax', 15, 2)->default(0);
-            $table->decimal('total_adv_tax', 15, 2)->default(0);
-        });
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
 
-        Schema::table('sale_items', function (Blueprint $table) {
-            $table->decimal('inc_tax', 15, 2)->default(0);
-            $table->decimal('adv_tax', 15, 2)->default(0);
-        });
+            if (!Schema::hasColumn('sales', 'total_inc_tax')) {
+
+                $table->decimal('total_inc_tax', 15, 2)->default(0);
+
+            }
+
+            if (!Schema::hasColumn('sales', 'total_adv_tax')) {
+
+                $table->decimal('total_adv_tax', 15, 2)->default(0);
+
+            }
+            });
+}
+
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_items', 'inc_tax')) {
+
+                $table->decimal('inc_tax', 15, 2)->default(0);
+
+            }
+
+            if (!Schema::hasColumn('sale_items', 'adv_tax')) {
+
+                $table->decimal('adv_tax', 15, 2)->default(0);
+
+            }
+            });
+}
     }
 
     /**
@@ -27,12 +51,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $table->dropColumn(['total_inc_tax', 'total_adv_tax']);
-        });
+            });
+}
 
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             $table->dropColumn(['inc_tax', 'adv_tax']);
-        });
+            });
+}
     }
 };

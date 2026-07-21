@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
-            $table->decimal('daily_wages', 10, 2)->nullable()->after('base_salary');
-            $table->boolean('use_daily_wages')->default(false)->after('daily_wages');
-        });
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_salary_structures', 'daily_wages')) {
+
+                $table->decimal('daily_wages', 10, 2)->nullable()->after('base_salary');
+
+            }
+
+            if (!Schema::hasColumn('hr_salary_structures', 'use_daily_wages')) {
+
+                $table->boolean('use_daily_wages')->default(false)->after('daily_wages');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             $table->dropColumn(['daily_wages', 'use_daily_wages']);
-        });
+            });
+}
     }
 };

@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_attendances', function (Blueprint $table) {
-            $table->boolean('is_early_in')->default(false)->after('late_minutes');
-            $table->integer('early_in_minutes')->default(0)->after('is_early_in');
-        });
+        if (Schema::hasTable('hr_attendances')) {
+    Schema::table('hr_attendances', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_attendances', 'is_early_in')) {
+
+                $table->boolean('is_early_in')->default(false)->after('late_minutes');
+
+            }
+
+            if (!Schema::hasColumn('hr_attendances', 'early_in_minutes')) {
+
+                $table->integer('early_in_minutes')->default(0)->after('is_early_in');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_attendances', function (Blueprint $table) {
+        if (Schema::hasTable('hr_attendances')) {
+    Schema::table('hr_attendances', function (Blueprint $table) {
             $table->dropColumn(['is_early_in', 'early_in_minutes']);
-        });
+            });
+}
     }
 };

@@ -649,7 +649,7 @@
             $('#category-dropdown').on('change', function() {
                 const cid = $(this).val();
                 if (!cid) return $('#subcategory-dropdown').html('<option value="">Select...</option>');
-                $.get('/get-subcategories/' + cid, function(res) {
+                $.get("{{ url('get-subcategories') }}/" + cid, function(res) {
                     let html = '<option value="">Select...</option>';
                     res.forEach(s => html += `<option value="${s.id}">${s.name}</option>`);
                     $('#subcategory-dropdown').html(html).trigger('change');

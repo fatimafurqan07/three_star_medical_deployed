@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             if (!Schema::hasColumn('sale_items', 'size_mode')) {
-                $table->string('size_mode')->nullable()->after('product_id');
+
+                if (!Schema::hasColumn('sale_items', 'size_mode')) {
+
+                    $table->string('size_mode')->nullable()->after('product_id');
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -23,8 +30,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 };

@@ -11,13 +11,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchase_items', function (Blueprint $table) {
+        if (Schema::hasTable('purchase_items')) {
+    Schema::table('purchase_items', function (Blueprint $table) {
             if (! Schema::hasColumn('purchase_items', 'batch_no')) {
-                $table->string('batch_no')->nullable();
-                $table->date('mfg_date')->nullable();
-                $table->date('exp_date')->nullable();
+
+                if (!Schema::hasColumn('purchase_items', 'batch_no')) {
+
+                    $table->string('batch_no')->nullable();
+
+                }
+
+                if (!Schema::hasColumn('purchase_items', 'mfg_date')) {
+
+                    $table->date('mfg_date')->nullable();
+
+                }
+
+                if (!Schema::hasColumn('purchase_items', 'exp_date')) {
+
+                    $table->date('exp_date')->nullable();
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -25,10 +42,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchase_items', function (Blueprint $table) {
+        if (Schema::hasTable('purchase_items')) {
+    Schema::table('purchase_items', function (Blueprint $table) {
             if (Schema::hasColumn('purchase_items', 'batch_no')) {
                 $table->dropColumn(['batch_no', 'mfg_date', 'exp_date']);
             }
-        });
+            });
+}
     }
 };

@@ -11,12 +11,34 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('delivery_note_items', function (Blueprint $table) {
-            $table->unsignedBigInteger('batch_id')->nullable()->after('product_id');
-            $table->string('lot_number')->nullable()->after('batch_id');
-            $table->date('mfg_date')->nullable()->after('lot_number');
-            $table->date('exp_date')->nullable()->after('mfg_date');
-        });
+        if (Schema::hasTable('delivery_note_items')) {
+    Schema::table('delivery_note_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('delivery_note_items', 'batch_id')) {
+
+                $table->unsignedBigInteger('batch_id')->nullable()->after('product_id');
+
+            }
+
+            if (!Schema::hasColumn('delivery_note_items', 'lot_number')) {
+
+                $table->string('lot_number')->nullable()->after('batch_id');
+
+            }
+
+            if (!Schema::hasColumn('delivery_note_items', 'mfg_date')) {
+
+                $table->date('mfg_date')->nullable()->after('lot_number');
+
+            }
+
+            if (!Schema::hasColumn('delivery_note_items', 'exp_date')) {
+
+                $table->date('exp_date')->nullable()->after('mfg_date');
+
+            }
+            });
+}
     }
 
     /**
@@ -24,8 +46,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('delivery_note_items', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_note_items')) {
+    Schema::table('delivery_note_items', function (Blueprint $table) {
             $table->dropColumn(['batch_id', 'lot_number', 'mfg_date', 'exp_date']);
-        });
+            });
+}
     }
 };

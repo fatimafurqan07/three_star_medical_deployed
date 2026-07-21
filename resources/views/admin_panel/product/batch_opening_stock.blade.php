@@ -111,6 +111,79 @@
             padding: 2px 8px;
             border-radius: 20px;
         }
+
+        /* Location type badge */
+        .loc-badge-shop {
+            display: inline-block;
+            font-size: 0.7rem;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #fff;
+            border-radius: 6px;
+            padding: 1px 7px;
+            margin-right: 4px;
+            font-weight: 600;
+        }
+        .loc-badge-wh {
+            display: inline-block;
+            font-size: 0.7rem;
+            background: linear-gradient(135deg, #0891b2, #0369a1);
+            color: #fff;
+            border-radius: 6px;
+            padding: 1px 7px;
+            margin-right: 4px;
+            font-weight: 600;
+        }
+        .warehouse-sub-field { transition: all .2s; }
+
+        /* Select2 styling overrides to match .form-control-pro */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            height: 42px !important;
+            background-color: #fff !important;
+            transition: border-color .15s, box-shadow .15s !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b !important;
+            font-size: .92rem !important;
+            padding-left: 13px !important;
+            padding-right: 25px !important;
+            line-height: 40px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px !important;
+            right: 10px !important;
+        }
+        .select2-container--default.select2-container--focus .select2-selection--single,
+        .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: #4f46e5 !important;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, .1) !important;
+            outline: none !important;
+        }
+        .select2-dropdown {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            overflow: hidden;
+            z-index: 9999;
+        }
+        .select2-results__option {
+            padding: 8px 12px !important;
+            font-size: .92rem !important;
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #4f46e5 !important;
+        }
+        .select2-results__group {
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            color: #64748b !important;
+            padding: 6px 12px 4px !important;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
     </style>
 
     <div class="page-container">
@@ -167,13 +240,34 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label-pro">Warehouse <span class="text-danger">*</span></label>
-                    <select name="warehouse_id" class="form-control-pro" required>
-                        <option value="">— Select —</option>
-                        @foreach ($warehouses as $w)
-                            <option value="{{ $w->id }}">{{ $w->warehouse_name }}</option>
-                        @endforeach
+                    <label class="form-label-pro">Location <span class="text-danger">*</span></label>
+                    <select class="form-control-pro location-select" required>
+                        <option value="">— Select Location —</option>
+                        <optgroup label="🏪 Shops (Retail)">
+                            @foreach ($shops as $s)
+                                <option value="shop__{{ $s->id }}" data-type="shop" data-wid="{{ $s->id }}"
+                                >{{ $s->warehouse_name }}</option>
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="🏭 Warehouses (Storage)">
+                            @foreach ($warehouses as $w)
+                                <option value="wh__{{ $w->id }}" data-type="warehouse" data-wid="{{ $w->id }}"
+                                >{{ $w->warehouse_name }}</option>
+                            @endforeach
+                        </optgroup>
                     </select>
+                    <!-- Hidden resolved warehouse_id sent to server -->
+                    <input type="hidden" name="warehouse_id" class="resolved-warehouse-id">
+                    <!-- Sub-dropdown: only shown when Warehouse is chosen -->
+                    <div class="warehouse-sub-field mt-2 d-none">
+                        <label class="form-label-pro text-info" style="font-size:.8rem;"><i class="las la-warehouse me-1"></i>Select Warehouse</label>
+                        <select class="form-control-pro warehouse-sub-select">
+                            <option value="">— Pick Warehouse —</option>
+                            @foreach ($warehouses as $w)
+                                <option value="{{ $w->id }}">{{ $w->warehouse_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label-pro">Qty <span class="text-danger">*</span></label>
@@ -212,10 +306,49 @@
             div.innerHTML = tpl;
             document.getElementById('batchRows').appendChild(div.firstElementChild);
 
-            // Bind EXP date change for live badge
             const row = document.querySelector(`[data-row-index="${rowCount}"]`);
+
+            // Bind EXP date change for live badge
             row.querySelector('.exp-date-input').addEventListener('change', function() {
                 updateExpBadge(row, this.value);
+            });
+
+            // Initialize Select2 on product dropdown
+            $(row).find('.product-select').select2({ width: '100%' });
+
+            // Initialize Select2 on location dropdown
+            $(row).find('.location-select').select2({ width: '100%' });
+
+            // Initialize Select2 on warehouse sub-dropdown
+            $(row).find('.warehouse-sub-select').select2({ width: '100%' });
+
+            // Location change: show/hide warehouse sub-dropdown & resolve warehouse_id
+            $(row).find('.location-select').on('change', function() {
+                const sel = this.options[this.selectedIndex];
+                const type = sel.getAttribute('data-type');
+                const wid  = sel.getAttribute('data-wid');
+                const subField  = row.querySelector('.warehouse-sub-field');
+                const hiddenWid = row.querySelector('.resolved-warehouse-id');
+
+                if (type === 'shop') {
+                    // Shop selected → directly use its warehouse id
+                    hiddenWid.value = wid;
+                    subField.classList.add('d-none');
+                    $(row).find('.warehouse-sub-select').val('').trigger('change.select2');
+                } else if (type === 'warehouse') {
+                    // Warehouse group → show sub-picker, clear resolved id
+                    hiddenWid.value = '';
+                    subField.classList.remove('d-none');
+                } else {
+                    hiddenWid.value = '';
+                    subField.classList.add('d-none');
+                }
+            });
+
+            // Warehouse sub-select change → update hidden warehouse_id
+            $(row).find('.warehouse-sub-select').on('change', function() {
+                const hiddenWid = row.querySelector('.resolved-warehouse-id');
+                hiddenWid.value = this.value;
             });
 
             rowCount++;
@@ -285,13 +418,19 @@
             let valid = true;
 
             rows.forEach(row => {
+                const warehouseId = row.querySelector('.resolved-warehouse-id').value;
+                const locSel      = row.querySelector('.location-select');
+                const locOpt      = locSel.options[locSel.selectedIndex];
+                const locType     = locOpt ? (locOpt.getAttribute('data-type') || '') : '';
+
                 const obj = {
-                    product_id: row.querySelector('[name="product_id"]').value,
-                    warehouse_id: row.querySelector('[name="warehouse_id"]').value,
+                    product_id:   row.querySelector('[name="product_id"]').value,
+                    warehouse_id: warehouseId,
+                    location_type: locType,
                     batch_number: row.querySelector('[name="batch_number"]').value,
-                    mfg_date: row.querySelector('[name="mfg_date"]').value || null,
-                    exp_date: row.querySelector('[name="exp_date"]').value,
-                    qty: row.querySelector('[name="qty"]').value,
+                    mfg_date:     row.querySelector('[name="mfg_date"]').value || null,
+                    exp_date:     row.querySelector('[name="exp_date"]').value,
+                    qty:          row.querySelector('[name="qty"]').value,
                 };
                 if (!obj.product_id || !obj.warehouse_id || !obj.batch_number || !obj.exp_date || !obj.qty) {
                     valid = false;
@@ -300,7 +439,7 @@
             });
 
             if (!valid) {
-                showAlert('danger', 'Please fill all required fields (Product, Warehouse, Batch No., EXP Date, Qty).');
+                showAlert('danger', 'Please fill all required fields (Product, Location, Batch No., EXP Date, Qty).');
                 return;
             }
 

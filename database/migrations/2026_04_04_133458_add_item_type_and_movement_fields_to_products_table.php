@@ -11,12 +11,34 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->boolean('is_fridge')->default(false);
-            $table->boolean('is_non_fridge')->default(false);
-            $table->boolean('is_fast_moving')->default(false);
-            $table->boolean('is_slow_moving')->default(false);
-        });
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('products', 'is_fridge')) {
+
+                $table->boolean('is_fridge')->default(false);
+
+            }
+
+            if (!Schema::hasColumn('products', 'is_non_fridge')) {
+
+                $table->boolean('is_non_fridge')->default(false);
+
+            }
+
+            if (!Schema::hasColumn('products', 'is_fast_moving')) {
+
+                $table->boolean('is_fast_moving')->default(false);
+
+            }
+
+            if (!Schema::hasColumn('products', 'is_slow_moving')) {
+
+                $table->boolean('is_slow_moving')->default(false);
+
+            }
+            });
+}
     }
 
     /**
@@ -24,8 +46,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             $table->dropColumn(['is_fridge', 'is_non_fridge', 'is_fast_moving', 'is_slow_moving']);
-        });
+            });
+}
     }
 };

@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('journal_entries', function (Blueprint $table) {
+        if (Schema::hasTable('journal_entries')) {
+    Schema::table('journal_entries', function (Blueprint $table) {
             // Polymorphic Party (Customer, Vendor, etc.)
             // Allows us to filter General Ledger entries for a specific party
             if (! Schema::hasColumn('journal_entries', 'party_type')) {
                 $table->nullableMorphs('party'); // party_type, party_id
             }
-        });
+            });
+}
     }
 
     /**
@@ -25,8 +27,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('journal_entries', function (Blueprint $table) {
+        if (Schema::hasTable('journal_entries')) {
+    Schema::table('journal_entries', function (Blueprint $table) {
             $table->dropMorphs('party');
-        });
+            });
+}
     }
 };

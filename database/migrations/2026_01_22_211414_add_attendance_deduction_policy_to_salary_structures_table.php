@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
-            $table->json('attendance_deduction_policy')->nullable()->after('deductions');
-            $table->boolean('carry_forward_deductions')->default(false)->after('attendance_deduction_policy');
-        });
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_salary_structures', 'attendance_deduction_policy')) {
+
+                $table->json('attendance_deduction_policy')->nullable()->after('deductions');
+
+            }
+
+            if (!Schema::hasColumn('hr_salary_structures', 'carry_forward_deductions')) {
+
+                $table->boolean('carry_forward_deductions')->default(false)->after('attendance_deduction_policy');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             $table->dropColumn(['attendance_deduction_policy', 'carry_forward_deductions']);
-        });
+            });
+}
     }
 };

@@ -93,7 +93,7 @@ class ProductController extends Controller
         $user = auth()->user();
         $branchId = $user->getBranchId() ?: ($request->branch_id ?: 1);
         $query = Product::query()
-            ->select('id', 'item_name', 'item_code', 'barcode_path', 'size_mode', 'height', 'width', 'pieces_per_box', 'purchase_price_per_m2', 'purchase_price_per_piece', 'pieces_per_m2', 'hs_code')
+            ->select('id', 'item_name', 'item_code', 'barcode_path', 'size_mode', 'pieces_per_box', 'purchase_price_per_piece', 'hs_code')
             ->select('products.*')
             ->with(['packings', 'unit'])
             ->withSum(['warehouseStocks' => function ($q) use ($user) {
@@ -490,10 +490,6 @@ class ProductController extends Controller
             $purchasePricePerBox = $buy;
         }
 
-        $height = (float) $request->height;
-        $width = (float) $request->width;
-        $totalM2 = ($height * $width) / 10000;
-
         $userId = Auth::id();
         $itemCode = $request->item_code;
         if (empty($itemCode)) {
@@ -509,8 +505,8 @@ class ProductController extends Controller
             $imagePath = 'uploads/products/'.$filename;
         }
 
-        DB::transaction(function () use ($request, $userId, $itemCode, $imagePath, $mode, $height, $width, $piecesPerBox, 
-            $totalM2, $salePricePerPiece, $salePricePerBox, $purchasePricePerPiece, $purchasePricePerBox, $packings) {
+        DB::transaction(function () use ($request, $userId, $itemCode, $imagePath, $mode, $piecesPerBox, 
+            $salePricePerPiece, $salePricePerBox, $purchasePricePerPiece, $purchasePricePerBox, $packings) {
 
             $product = Product::create([
                 'creater_id' => $userId,
@@ -526,10 +522,7 @@ class ProductController extends Controller
                 'image' => $imagePath,
                 'color' => $request->color ? json_encode(array_values(array_filter($request->color))) : null,
                 'size_mode' => $mode,
-                'height' => $height,
-                'width' => $width,
                 'pieces_per_box' => $piecesPerBox,
-                'total_m2' => $totalM2,
                 'sale_price_per_box' => $salePricePerBox,
                 'sale_price_per_piece' => $salePricePerPiece,
                 'purchase_price_per_piece' => $purchasePricePerPiece,
@@ -774,5 +767,557 @@ class ProductController extends Controller
         }
 
         return response()->json(['status' => 'success', 'message' => 'Valid']);
+    }
+
+    public function downloadTemplate()
+    {
+        $data = [
+            // Header row
+            [
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>PRODUCT NAME</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>ITEM CODE</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>CATEGORY</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>SUBCATEGORY</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>BRAND</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>HS CODE</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>MODEL SERIES</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>MDR</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>COLOR/TAGS</center></b></style>',
+                '<style bgcolor="#FFFFF2CC" color="#333333"><b><center>PACK NAME</center></b></style>',
+                '<style bgcolor="#FFFFF2CC" color="#333333"><b><center>PCS PER PACK</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>PURCHASE PRICE</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>SALE PRICE</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>IS FRIDGE</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>IS NON FRIDGE</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>IS FAST MOVING</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>IS SLOW MOVING</center></b></style>',
+                '<style bgcolor="#1A6B3C" color="#FFFFFF"><b><center>WAREHOUSE</center></b></style>'
+            ],
+            // Row 1
+            [
+                'DENGUE IGG/IGM DEVICE', 'A1', 'RAPID DEVICES', 'ABBOTT', 'ABBOTT', '3822.1900',
+                '', '0002781', '', '1x25', 25, 500, 650, 0, 1, 1, 0, 'ABBOTT'
+            ],
+            // Row 2
+            [
+                'HBSAG DEVICE', 'A2', 'RAPID DEVICES', 'ABBOTT', 'ABBOTT', '3822.1900',
+                '', '0000350', '', '1X30', 30, 450, 600, 0, 1, 0, 0, 'RAPID DEVICES'
+            ]
+        ];
+
+        $xlsx = \Shuchkin\SimpleXLSXGen::fromArray($data);
+        $xlsx->setColWidth('A', 30);
+        $xlsx->setColWidth('B', 12);
+        $xlsx->setColWidth('C', 18);
+        $xlsx->setColWidth('D', 18);
+        $xlsx->setColWidth('E', 18);
+        $xlsx->setColWidth('F', 12);
+        $xlsx->setColWidth('G', 16);
+        $xlsx->setColWidth('H', 12);
+        $xlsx->setColWidth('I', 14);
+        $xlsx->setColWidth('J', 14);
+        $xlsx->setColWidth('K', 12);
+        $xlsx->setColWidth('L', 15);
+        $xlsx->setColWidth('M', 12);
+        $xlsx->setColWidth('N', 10);
+        $xlsx->setColWidth('O', 12);
+        $xlsx->setColWidth('P', 13);
+        $xlsx->setColWidth('Q', 13);
+        $xlsx->setColWidth('R', 14);
+
+        $tmpPath = storage_path('app/product_template_' . uniqid() . '.xlsx');
+        $xlsx->saveAs($tmpPath);
+
+        return response()->download($tmpPath, 'product_import_template.xlsx', [
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma'        => 'no-cache',
+        ])->deleteFileAfterSend(true);
+    }
+
+
+
+
+    public function importProducts(Request $request)
+    {
+        $request->validate(['file' => 'required|file']);
+
+        try {
+            if (!$request->hasFile('file') || !$request->file('file')->isValid()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'No valid spreadsheet file was uploaded.',
+                ], 400);
+            }
+
+            $file      = $request->file('file');
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            if (!in_array($extension, ['csv', 'xlsx'])) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'Only CSV (.csv) and Excel (.xlsx) files are supported.',
+                ], 400);
+            }
+
+            // ── Parse file into $rawRows ──────────────────────────────────────
+            $rawRows = [];
+
+            if ($extension === 'xlsx') {
+                if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getRealPath())) {
+                    $rawRows = $xlsx->rows();
+                } else {
+                    return response()->json([
+                        'status'  => 'error',
+                        'type'    => 'format_error',
+                        'message' => 'Unable to parse the Excel file: ' . \Shuchkin\SimpleXLSX::parseError(),
+                    ], 400);
+                }
+            } else {
+                $handle = fopen($file->getRealPath(), 'r');
+                if (!$handle) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'type'    => 'format_error',
+                        'message' => 'Unable to open the uploaded file.',
+                    ], 400);
+                }
+
+                // Strip UTF-8 BOM if present
+                $bom = fread($handle, 3);
+                if ($bom !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+                    rewind($handle);
+                }
+
+                // Auto-detect delimiter
+                $firstLine     = fgets($handle);
+                rewind($handle);
+                // Skip BOM again after rewind
+                $bom2 = fread($handle, 3);
+                if ($bom2 !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+                    rewind($handle);
+                }
+
+                $commaCount     = substr_count($firstLine, ',');
+                $semicolonCount = substr_count($firstLine, ';');
+                $tabCount       = substr_count($firstLine, "\t");
+
+                $delimiter = ',';
+                if ($semicolonCount > $commaCount && $semicolonCount > $tabCount) {
+                    $delimiter = ';';
+                } elseif ($tabCount > $commaCount && $tabCount > $semicolonCount) {
+                    $delimiter = "\t";
+                }
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rawRows[] = $row;
+                }
+                fclose($handle);
+            }
+
+            if (empty($rawRows)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'Spreadsheet has no content.',
+                ], 400);
+            }
+
+            // ── Normalize header row ──────────────────────────────────────────
+            $rawHeaders = array_shift($rawRows);
+
+            // Normalise: strip control chars, lowercase, spaces→underscores
+            $normalizeKey = function (string $h): string {
+                $h = preg_replace('/[\x00-\x1F\x7F-\xFF]/', '', $h);
+                $h = trim(strtolower($h));
+                $h = str_replace([' ', '-', '/', '_'], '_', $h);
+                return preg_replace('/_+/', '_', rtrim($h, '_'));
+            };
+
+            $normalizedHeaders = array_map($normalizeKey, $rawHeaders);
+
+            /*
+             * Flexible column-name aliases.
+             * Maps every accepted variant → canonical field name.
+             * This lets us handle both the template format AND the user's
+             * original products_raw.csv format simultaneously.
+             */
+            $aliases = [
+                // Product name
+                'product_name'  => 'item_name',
+                'name'          => 'item_name',
+                'item_name'     => 'item_name',
+
+                // Item code
+                'item_code'     => 'item_code',
+                'code'          => 'item_code',
+
+                // Category
+                'category'      => 'category',
+
+                // Subcategory
+                'subcategory'   => 'sub_category',
+                'sub_category'  => 'sub_category',
+
+                // Brand
+                'brand'         => 'brand',
+
+                // HS Code
+                'hs_code'       => 'hs_code',
+
+                // Model
+                'model_series'  => 'model',
+                'model'         => 'model',
+
+                // MDR
+                'mdr'           => 'mdr',
+
+                // Color / Tags
+                'color_tags'    => 'color',
+                'color'         => 'color',
+                'tags'          => 'color',
+
+                // Packing name (goes to product_uoms.name)
+                'pack_name'     => 'pack_name',
+                'packing'       => 'pack_name',
+                'packing_name'  => 'pack_name',
+                'packing_1_name'=> 'pack_name',
+                'unit'          => 'pack_name',
+
+                // Pieces per pack/box
+                'pcs_per_pack'  => 'pieces_per_box',
+                'pieces_per_pack'=> 'pieces_per_box',
+                'pieces_per_box'=> 'pieces_per_box',
+                'pcs_per_box'   => 'pieces_per_box',
+                'pcs_box'       => 'pieces_per_box',
+
+                // Prices
+                'purchase_price' => 'purchase_price',
+                'buy_price'      => 'purchase_price',
+                'sale_price'     => 'sale_price',
+                'sell_price'     => 'sale_price',
+
+                // Boolean flags
+                'is_fridge'      => 'is_fridge',
+                'is_non_fridge'  => 'is_non_fridge',
+                'is_fast_moving' => 'is_fast_moving',
+                'is_slow_moving' => 'is_slow_moving',
+
+                // Warehouse
+                'warehouse'      => 'warehouse',
+            ];
+
+            // Build fieldMap: canonical_name → column_index
+            $fieldMap = [];
+            foreach ($normalizedHeaders as $idx => $rawKey) {
+                $canonical = $aliases[$rawKey] ?? $rawKey;
+                // Only store first occurrence to avoid duplicates
+                if (!isset($fieldMap[$canonical])) {
+                    $fieldMap[$canonical] = $idx;
+                }
+            }
+
+            // ── Require at minimum: item_name, category, brand ───────────────
+            $requiredFields = [
+                'item_name' => 'Product Name  (column: PRODUCT NAME or Item Name)',
+                'category'  => 'Category',
+                'brand'     => 'Brand',
+            ];
+
+            $missing = [];
+            foreach ($requiredFields as $field => $label) {
+                if (!isset($fieldMap[$field])) {
+                    $missing[] = $label;
+                }
+            }
+
+            if (!empty($missing)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'column_mismatch',
+                    'message' => 'Required columns not found in your file:<br><strong>'
+                                 . implode(', ', $missing)
+                                 . '</strong><br>Please use the provided template.',
+                ], 400);
+            }
+
+            // ── Helper: safely read a field value ────────────────────────────
+            $val = function (string $field, $default = '') use (&$row, &$fieldMap): string {
+                if (isset($fieldMap[$field]) && isset($row[$fieldMap[$field]])) {
+                    $v = trim((string)$row[$fieldMap[$field]]);
+                    return $v === '' ? (string)$default : $v;
+                }
+                return (string)$default;
+            };
+
+            // ── Pre-load default warehouse (defaults to branch shop) ─────────
+            $user = auth()->user();
+            $activeBranchId = $user->isSuperAdmin()
+                ? (session('super_admin_branch_id') ?? \App\Models\Branch::min('id'))
+                : $user->branch_id;
+
+            $shopWarehouse = \App\Models\Warehouse::where('branch_id', $activeBranchId)
+                ->where('type', 'shop')
+                ->first()
+                ?? \App\Models\Warehouse::where('type', 'shop')->first()
+                ?? \App\Models\Warehouse::first();
+
+            $defaultWarehouseId = $shopWarehouse ? $shopWarehouse->id : \App\Models\Warehouse::min('id');
+            $userId             = auth()->id();
+
+            $rowCount      = 0;
+            $importedCount = 0;
+            $skippedCount  = 0;
+            $dummyCount    = 0;
+            $duplicateCount = 0;
+            $errors        = [];
+
+            $autoFillDummy = $request->boolean('auto_fill_dummy') || $request->input('auto_fill_dummy') == '1';
+
+            DB::beginTransaction();
+
+            foreach ($rawRows as $row) {
+                $rowCount++;
+
+                // Skip completely empty rows
+                if (empty(array_filter(array_map('trim', $row)))) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                // ── Required field validation & Dummy Auto-fill ───────────────
+                $itemName     = trim($val('item_name'));
+                $categoryName = trim($val('category'));
+                $brandName    = trim($val('brand'));
+
+                $usedDummy = false;
+
+                if (empty($itemName)) {
+                    if ($autoFillDummy) {
+                        $itemName  = "[DUMMY] Item Row {$rowCount}";
+                        $usedDummy = true;
+                    } else {
+                        $errors[] = "Row {$rowCount}: Product Name is empty — row skipped.";
+                        continue;
+                    }
+                }
+
+                if (empty($categoryName)) {
+                    if ($autoFillDummy) {
+                        $categoryName = "Unspecified Category (Dummy)";
+                        $usedDummy    = true;
+                    } else {
+                        $errors[] = "Row {$rowCount}: Category is empty for '{$itemName}' — row skipped.";
+                        continue;
+                    }
+                }
+
+                if (empty($brandName)) {
+                    if ($autoFillDummy) {
+                        $brandName = "Unspecified Brand (Dummy)";
+                        $usedDummy = true;
+                    } else {
+                        $errors[] = "Row {$rowCount}: Brand is empty for '{$itemName}' — row skipped.";
+                        continue;
+                    }
+                }
+
+                if ($usedDummy) {
+                    $dummyCount++;
+                }
+
+                // ── Duplicate Check 1: item_code already exists ───────────────
+                $itemCode = trim($val('item_code'));
+                if ($itemCode !== '' && Product::where('item_code', $itemCode)->exists()) {
+                    $duplicateCount++;
+                    $errors[] = "Row {$rowCount}: Item Code '{$itemCode}' already exists — skipped.";
+                    continue;
+                }
+
+                // ── Duplicate Check 2: same item_name + brand already exists ──
+                $existsByName = Product::whereRaw('LOWER(TRIM(item_name)) = ?', [strtolower($itemName)])
+                    ->whereHas('brand', function ($q) use ($brandName) {
+                        $q->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($brandName)]);
+                    })
+                    ->exists();
+                if ($existsByName) {
+                    $duplicateCount++;
+                    $errors[] = "Row {$rowCount}: Product '{$itemName}' by brand '{$brandName}' already exists — skipped.";
+                    continue;
+                }
+
+                // ── Resolve or create: Category ───────────────────────────────
+                $category   = Category::where('name', 'LIKE', trim($categoryName))->first()
+                              ?? Category::create(['name' => trim($categoryName)]);
+                $categoryId = $category->id;
+
+                // ── Resolve or create: Subcategory ────────────────────────────
+                $subCategoryId  = null;
+                $subcategoryName = trim($val('sub_category'));
+                if ($subcategoryName !== '') {
+                    $subcategory = Subcategory::where('name', 'LIKE', $subcategoryName)
+                                             ->where('category_id', $categoryId)
+                                             ->first()
+                                  ?? Subcategory::create([
+                                         'name'        => $subcategoryName,
+                                         'category_id' => $categoryId,
+                                     ]);
+                    $subCategoryId = $subcategory->id;
+                }
+
+                // ── Resolve or create: Brand ──────────────────────────────────
+                $brand   = Brand::where('name', 'LIKE', trim($brandName))->first()
+                           ?? Brand::create(['name' => trim($brandName)]);
+                $brandId = $brand->id;
+
+                // ── Resolve or create: Unit (default: Piece) ──────────────────
+                $unitName = trim($val('unit', 'Piece')) ?: 'Piece';
+                $unit     = Unit::where('name', 'LIKE', $unitName)->first()
+                            ?? Unit::create(['name' => $unitName]);
+                $unitId   = $unit->id;
+
+                // ── Packing info ──────────────────────────────────────────────
+                // pack_name  → product_uoms.name (e.g. "1X25", "2X100")
+                // pieces_per_box → product_uoms.pieces_per_box + products.pieces_per_box
+                $packName    = trim($val('pack_name', $unitName)) ?: $unitName;
+                $piecesPerBox = max(1, (int)$val('pieces_per_box', 1));
+                $buyPrice     = (float)$val('purchase_price', 0);
+                $sellPrice    = (float)$val('sale_price', 0);
+
+                // Derive size_mode
+                $sizeMode = ($piecesPerBox > 1) ? 'by_cartons' : 'by_pieces';
+
+                // Calculate per-piece and per-box prices
+                if ($sizeMode === 'by_cartons') {
+                    $salePricePerPiece      = $sellPrice;
+                    $salePricePerBox        = $sellPrice * $piecesPerBox;
+                    $purchasePricePerPiece  = $buyPrice;
+                    $purchasePricePerBox    = $buyPrice * $piecesPerBox;
+                } else {
+                    $salePricePerPiece      = $sellPrice;
+                    $salePricePerBox        = $sellPrice;
+                    $purchasePricePerPiece  = $buyPrice;
+                    $purchasePricePerBox    = $buyPrice;
+                }
+
+                // ── Item Code: use provided or auto-generate ──────────────────
+                // (already read above for duplicate check; just auto-generate if empty)
+                if ($itemCode === '') {
+                    $last     = Product::orderBy('id', 'desc')->first();
+                    $nextId   = $last ? ($last->id + 1) : 1;
+                    $itemCode = 'ITEM-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+                }
+
+                // Ensure uniqueness (append suffix if somehow still duplicate)
+                $originalCode = $itemCode;
+                $suffix = 1;
+                while (Product::where('item_code', $itemCode)->exists()) {
+                    $itemCode = $originalCode . '-' . $suffix++;
+                }
+
+                // ── Color / Tags ──────────────────────────────────────────────
+                $colorRaw = trim($val('color'));
+                $colorJson = null;
+                if ($colorRaw !== '') {
+                    $colorTags = array_values(array_filter(array_map('trim', explode(',', $colorRaw))));
+                    $colorJson = !empty($colorTags) ? json_encode($colorTags) : null;
+                }
+
+                // ── Boolean flags ─────────────────────────────────────────────
+                $boolVal = function (string $f) use ($val): int {
+                    $v = strtolower(trim($val($f, '0')));
+                    return in_array($v, ['1', 'yes', 'true', 'y'], true) ? 1 : 0;
+                };
+
+                // ── Resolve Warehouse (optional column) ───────────────────────
+                $warehouseId = $defaultWarehouseId;
+                $warehouseName = trim($val('warehouse'));
+                if ($warehouseName !== '') {
+                    $wh = \App\Models\Warehouse::where('warehouse_name', 'LIKE', $warehouseName)->first();
+                    if ($wh) {
+                        $warehouseId = $wh->id;
+                    }
+                }
+
+                // ── 1. INSERT into products ───────────────────────────────────
+                $product = Product::create([
+                    'creater_id'              => $userId,
+                    'category_id'             => $categoryId,
+                    'sub_category_id'         => $subCategoryId,
+                    'brand_id'                => $brandId,
+                    'unit_id'                 => $unitId,
+                    'item_code'               => $itemCode,
+                    'item_name'               => $itemName,
+                    'barcode_path'            => rand(100000000000, 999999999999),
+                    'model'                   => $val('model') ?: null,
+                    'mdr'                     => $val('mdr')   ?: null,
+                    'hs_code'                 => $val('hs_code') ?: null,
+                    'color'                   => $colorJson,
+                    'size_mode'               => $sizeMode,
+                    'pieces_per_box'          => $piecesPerBox,
+                    'sale_price_per_piece'    => $salePricePerPiece,
+                    'sale_price_per_box'      => $salePricePerBox,
+                    'purchase_price_per_piece'=> $purchasePricePerPiece,
+                    'purchase_price_per_box'  => $purchasePricePerBox,
+                    'is_fridge'               => $boolVal('is_fridge'),
+                    'is_non_fridge'           => $boolVal('is_non_fridge'),
+                    'is_fast_moving'          => $boolVal('is_fast_moving'),
+                    'is_slow_moving'          => $boolVal('is_slow_moving'),
+                    'is_part'                 => 0,
+                    'is_assembled'            => 0,
+                ]);
+
+                // ── 2. INSERT into product_uoms (packing) ─────────────────────
+                \App\Models\ProductUom::create([
+                    'product_id'    => $product->id,
+                    'name'          => $packName,          // e.g. "1X25", "2X100"
+                    'pieces_per_box'=> $piecesPerBox,
+                    'purchase_price'=> $buyPrice,
+                    'sale_price'    => $sellPrice,
+                ]);
+
+                // ── 3. INSERT into warehouse_stocks (initial entry, qty = 0) ──
+                if ($warehouseId) {
+                    WarehouseStock::create([
+                        'warehouse_id' => $warehouseId,
+                        'product_id'   => $product->id,
+                        'quantity'     => 0,
+                        'total_pieces' => 0,
+                        'remarks'      => 'Imported — Initial Entry',
+                    ]);
+                }
+
+                $importedCount++;
+            }
+
+            // ── Commit all valid rows ─────────────────────────────────────────
+            DB::commit();
+
+            $dummyMsg = ($dummyCount > 0) ? " (including <strong>{$dummyCount}</strong> rows with dummy data)" : "";
+            $dupMsg   = ($duplicateCount > 0) ? " ({$duplicateCount} duplicates skipped)" : "";
+
+            return response()->json([
+                'status'          => 'success',
+                'imported_count'  => $importedCount,
+                'skipped_count'   => $skippedCount,
+                'dummy_count'     => $dummyCount,
+                'duplicate_count' => $duplicateCount,
+                'errors'          => $errors,
+                'message'         => "✅ Successfully imported <strong>{$importedCount}</strong> products"
+                                     . $dummyMsg . $dupMsg
+                                     . ($skippedCount ? " ({$skippedCount} empty rows skipped)." : '.'),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'type'    => 'server_error',
+                'message' => 'Server error during import: ' . $e->getMessage()
+                             . ' (Line ' . $e->getLine() . ')',
+            ], 500);
+        }
     }
 }

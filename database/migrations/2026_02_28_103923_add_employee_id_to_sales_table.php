@@ -11,10 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->unsignedBigInteger('employee_id')->nullable()->after('customer_id');
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sales', 'employee_id')) {
+
+                $table->unsignedBigInteger('employee_id')->nullable()->after('customer_id');
+
+            }
             $table->foreign('employee_id')->references('id')->on('hr_employees')->nullOnDelete();
-        });
+            });
+}
     }
 
     /**
@@ -22,8 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 };

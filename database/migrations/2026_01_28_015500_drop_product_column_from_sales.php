@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             if (Schema::hasColumn('sales', 'product')) {
                 $table->dropColumn('product');
             }
-        });
+            });
+}
     }
 
     /**
@@ -23,9 +25,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             // Restore as nullable text if rolled back
-            $table->text('product')->nullable();
-        });
+
+            if (!Schema::hasColumn('sales', 'product')) {
+
+                $table->text('product')->nullable();
+
+            }
+            });
+}
     }
 };

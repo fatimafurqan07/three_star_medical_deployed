@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
-            $table->string('gst_no')->after('ntn_no')->nullable();
-            $table->string('drap_no')->after('dsl_no')->nullable();
-        });
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customers', 'gst_no')) {
+
+                $table->string('gst_no')->after('ntn_no')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('customers', 'drap_no')) {
+
+                $table->string('drap_no')->after('dsl_no')->nullable();
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
             $table->dropColumn(['gst_no', 'drap_no']);
-        });
+            });
+}
     }
 };

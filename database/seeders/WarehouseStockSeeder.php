@@ -11,52 +11,45 @@ class WarehouseStockSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * Seeds initial stock into existing warehouses (type = 'warehouse' only).
+     * Does NOT create any warehouse — WarehouseSeeder must run first.
      */
     public function run(): void
     {
         $products = Product::all();
-        $warehouse = Warehouse::first();
 
-        if (!$warehouse) {
-             $warehouse = Warehouse::create([
-                'branch_id' => 1,
-                'warehouse_name' => 'Main Store',
-                'creater_id' => 1,
-                'location' => 'HQ',
-             ]);
+        // Only seed into proper warehouses (not shops — shop stock comes through sales)
+        $warehouses = Warehouse::where('type', 'warehouse')->get();
+
+        if ($warehouses->isEmpty()) {
+            $this->command->warn('WarehouseStockSeeder: No warehouses found. Run WarehouseSeeder first.');
+            return;
         }
 
-        foreach ($products as $product) {
-            // Check if stock already exists
-            $exists = WarehouseStock::where('warehouse_id', $warehouse->id)
-                ->where('product_id', $product->id)
-                ->exists();
+        foreach ($warehouses as $warehouse) {
+            foreach ($products as $product) {
+                // Skip if stock record already exists
+                $exists = WarehouseStock::where('warehouse_id', $warehouse->id)
+                    ->where('product_id', $product->id)
+                    ->exists();
 
-            if (!$exists) {
-                // Determine sensible defaults if columns allow null or have defaults
-                // Assuming product has fields, otherwise default to simple logic
-                $pcs = $product->pieces_per_box ?? 1;
-                $boxes = $product->boxes_quantity ?? 0;
-                $loose = $product->loose_pieces ?? 0;
-                $qty = $product->total_stock_qty ?? 0;
-                
-                // If total stock is 0 but we want to seed something:
-                if ($qty == 0) {
-                     $qty = 100;
-                     $boxes = 10;
-                     $pcs = 10;
-                     $loose = 0;
+                if ($exists) {
+                    continue;
                 }
 
                 WarehouseStock::create([
+                    'branch_id'      => $warehouse->branch_id,
                     'warehouse_id'   => $warehouse->id,
                     'product_id'     => $product->id,
-                    'quantity'       => $qty,
-                    'pieces_per_box' => $pcs,
-                    // 'price' removed
-                    'remarks'        => 'Seeded via WarehouseStockSeeder',
+                    'quantity'       => 0,   // Start at zero — real stock added via Opening Stock/Purchases
+                    'total_pieces'   => 0,
+                    'remarks'        => 'Initial record — seeded via WarehouseStockSeeder',
                 ]);
             }
         }
+
+        $this->command->info(
+            "WarehouseStockSeeder: Created stock records for {$warehouses->count()} warehouses × {$products->count()} products."
+        );
     }
 }

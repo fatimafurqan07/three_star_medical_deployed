@@ -11,15 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
-            $table->boolean('enable_hs_code')->default(true)->after('note');
-        });
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('delivery_notes', 'enable_hs_code')) {
+
+                $table->boolean('enable_hs_code')->default(true)->after('note');
+
+            }
+            });
+}
     }
 
     public function down(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
             $table->dropColumn('enable_hs_code');
-        });
+            });
+}
     }
 };

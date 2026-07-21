@@ -31,10 +31,22 @@ class ProductBatchController extends Controller
 
     public function openingStockForm()
     {
-        $products   = Product::orderBy('item_name')->get(['id', 'item_name', 'item_code']);
-        $warehouses = Warehouse::where('branch_id', $this->getBranchId())->orderBy('warehouse_name')->get();
+        Warehouse::ensureShopWarehousesExists();
 
-        return view('admin_panel.product.batch_opening_stock', compact('products', 'warehouses'));
+        $products   = Product::orderBy('item_name')->get(['id', 'item_name', 'item_code']);
+        $branchId   = $this->getBranchId();
+
+        $shops = Warehouse::where('type', 'shop')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderBy('warehouse_name')
+            ->get();
+
+        $warehouses = Warehouse::where('type', 'warehouse')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderBy('warehouse_name')
+            ->get();
+
+        return view('admin_panel.product.batch_opening_stock', compact('products', 'shops', 'warehouses'));
     }
 
     public function storeOpeningBatch(Request $request)
@@ -52,10 +64,12 @@ class ProductBatchController extends Controller
         $branchId = $this->getBranchId();
         DB::transaction(function () use ($request, $branchId) {
             foreach ($request->rows as $row) {
-                ProductBatch::create([
+                $batchBranchId = $branchId ?: (\App\Models\Warehouse::where('id', $row['warehouse_id'])->value('branch_id') ?: 1);
+                
+                $batch = ProductBatch::create([
                     'product_id'      => $row['product_id'],
                     'warehouse_id'    => $row['warehouse_id'],
-                    'branch_id'       => $branchId,
+                    'branch_id'       => $batchBranchId,
                     'purchase_item_id' => null,
                     'batch_number'    => $row['batch_number'],
                     'mfg_date'        => $row['mfg_date'] ?? null,
@@ -65,6 +79,31 @@ class ProductBatchController extends Controller
                     'source_type'     => 'opening_stock',
                     'status'          => 'active',
                 ]);
+
+                // Credit the live stock table (warehouse_stocks)
+                \App\Services\StockService::credit(
+                    $row['product_id'],
+                    null,
+                    $row['warehouse_id'],
+                    $batchBranchId,
+                    $row['qty']
+                );
+
+                // Insert into stock_movements ledger
+                $movementData = [
+                    'product_id' => $row['product_id'],
+                    'type'       => 'in',
+                    'qty'        => $row['qty'],
+                    'ref_type'   => 'INIT',
+                    'ref_id'     => $batch->id,
+                    'note'       => 'Opening stock batch entry (Batch: ' . $row['batch_number'] . ')',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                if (\Schema::hasColumn('stock_movements', 'branch_id')) {
+                    $movementData['branch_id'] = $batchBranchId;
+                }
+                DB::table('stock_movements')->insert($movementData);
             }
         });
 

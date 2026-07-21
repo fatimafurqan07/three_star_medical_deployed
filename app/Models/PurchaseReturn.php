@@ -25,6 +25,7 @@ class PurchaseReturn extends Model
     'paid',
     'balance',
     'remarks',
+    'created_by',
 ];
  public function vendor()
     {
@@ -46,6 +47,11 @@ class PurchaseReturn extends Model
     public function purchase()
     {
         return $this->belongsTo(Purchase::class);
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     // Dynamic Summaries for Index Page

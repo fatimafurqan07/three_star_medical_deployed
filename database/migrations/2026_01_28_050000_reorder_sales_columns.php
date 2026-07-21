@@ -12,7 +12,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             // Reordering via raw SQL MODIFY COLUMN for MySQL
 
             // 1. Header
@@ -45,7 +46,8 @@ return new class extends Migration
             // 6. Timestamps
             DB::statement('ALTER TABLE sales MODIFY COLUMN created_at TIMESTAMP NULL AFTER total_amount_Words');
             DB::statement('ALTER TABLE sales MODIFY COLUMN updated_at TIMESTAMP NULL AFTER created_at');
-        });
+            });
+}
     }
 
     /**

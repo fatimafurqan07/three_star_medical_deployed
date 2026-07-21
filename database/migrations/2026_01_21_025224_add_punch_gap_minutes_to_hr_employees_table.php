@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             // Individual punch gap setting per employee (null = use global default)
             $table->unsignedInteger('punch_gap_minutes')->nullable()->after('last_device_sync_at');
-        });
+            });
+}
     }
 
     /**
@@ -22,8 +24,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             $table->dropColumn('punch_gap_minutes');
-        });
+            });
+}
     }
 };

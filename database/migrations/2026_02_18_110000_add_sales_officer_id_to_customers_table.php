@@ -8,15 +8,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
-            $table->unsignedBigInteger('sales_officer_id')->nullable()->after('customer_type');
-        });
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customers', 'sales_officer_id')) {
+
+                $table->unsignedBigInteger('sales_officer_id')->nullable()->after('customer_type');
+
+            }
+            });
+}
     }
 
     public function down(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
             $table->dropColumn('sales_officer_id');
-        });
+            });
+}
     }
 };

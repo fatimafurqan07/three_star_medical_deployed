@@ -11,14 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-             $table->unsignedBigInteger('brand_id')->nullable()->after('sub_category_id');
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+             if (!Schema::hasColumn('products', 'brand_id')) {
+
+                 $table->unsignedBigInteger('brand_id')->nullable()->after('sub_category_id');
+
+             }
 
                $table->foreign('brand_id')
                   ->references('id')
                   ->on('brands')
                   ->onDelete('set null'); // agar brand delete ho to null ho jaye            //
-        });
+            });
+}
     }
 
     /**
@@ -26,9 +33,11 @@ return new class extends Migration
      */
     public function down(): void
     { 
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             $table->dropForeign(['brand_id']);
             $table->dropColumn('brand_id');
-        });
+            });
+}
     }
 };

@@ -11,11 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->date('sale_date')->nullable()->after('invoice_no');
-            $table->string('vendor_bill_no')->nullable()->after('sale_order_no');
-            $table->string('order_no')->nullable()->after('vendor_bill_no');
-        });
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sales', 'sale_date')) {
+
+                $table->date('sale_date')->nullable()->after('invoice_no');
+
+            }
+
+            if (!Schema::hasColumn('sales', 'vendor_bill_no')) {
+
+                $table->string('vendor_bill_no')->nullable()->after('sale_order_no');
+
+            }
+
+            if (!Schema::hasColumn('sales', 'order_no')) {
+
+                $table->string('order_no')->nullable()->after('vendor_bill_no');
+
+            }
+            });
+}
     }
 
     /**
@@ -23,8 +40,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $table->dropColumn(['sale_date', 'vendor_bill_no', 'order_no']);
-        });
+            });
+}
     }
 };

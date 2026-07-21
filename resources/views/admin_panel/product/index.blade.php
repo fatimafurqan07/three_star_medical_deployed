@@ -4,64 +4,210 @@
         div.dataTables_wrapper div.dataTables_length select {
             width: 75px !important
         }
+        .btn-xs {
+            padding: 2px 7px;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            border-radius: 4px;
+        }
+        /* More Dropdown Styling */
+        .more-btn {
+            padding: 5px 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .more-btn:hover, .more-btn.active, .more-btn[aria-expanded="true"] {
+            background: #4f46e5 !important;
+            color: #ffffff !important;
+            border-color: #4f46e5 !important;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+        }
+        .more-dropdown-menu {
+            display: none;
+            min-width: 180px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+            padding: 6px;
+            background: #ffffff;
+            z-index: 10050 !important;
+            list-style: none;
+            margin: 0;
+        }
+        .more-dropdown-menu.show {
+            display: block !important;
+        }
+        .more-dropdown-menu .dropdown-item {
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.83rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #334155;
+            transition: background 0.15s ease, color 0.15s ease;
+            text-decoration: none;
+        }
+        .more-dropdown-menu .dropdown-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .more-dropdown-menu .dropdown-item .di-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        /* Hide DataTables default search - we use custom */
+        .dataTables_filter { display: none !important; }
+        /* Fix horizontal scroll */
+        #productTable { width: 100% !important; }
+        #productTable thead th {
+            white-space: nowrap;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #6b7280;
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+            padding: 10px 8px;
+        }
+        #productTable tbody td {
+            font-size: 0.82rem;
+            padding: 8px 8px;
+            vertical-align: middle;
+            border-color: #f3f4f6;
+        }
+        #productTable tbody tr:hover {
+            background: #f8faff;
+        }
+        .product-search-bar {
+            position: relative;
+        }
+        .product-search-bar .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        .product-search-bar input {
+            padding-left: 36px;
+            border-radius: 8px;
+            border: 1.5px solid #e5e7eb;
+            font-size: 0.85rem;
+            height: 38px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .product-search-bar input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+        }
+        .table-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            border-radius: 0;
+        }
+        .product-count-badge {
+            background: #ede9fe;
+            color: #6d28d9;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
     </style>
 
 
 
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div>
-                <h5 class="mb-0 fw-bold">📦 Product List</h5>
-                <small class="text-muted">Manage all products here</small>
+
+    <div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+        <!-- Card Header -->
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center" style="padding: 14px 20px;">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width:38px;height:38px;background:#ede9fe;border-radius:10px;display:grid;place-items:center;">
+                    <span style="font-size:1.1rem;">📦</span>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold text-dark" style="font-size:0.95rem;">Product List</h6>
+                    <small class="text-muted" style="font-size:0.75rem;">Manage all products &amp; inventory</small>
+                </div>
             </div>
-            <div class="d-flex justify-content-between align-items-end gap-1">
+            <div class="d-flex align-items-center gap-2">
                 @if (auth()->user()->can('discount.products.view') || auth()->user()->email === 'admin@admin.com')
-                    <a href="{{ route('discount.index') }}" class="btn btn-success btn-sm">
-                        View Discount
+                    <a href="{{ route('discount.index') }}" class="btn btn-sm btn-outline-success" style="font-size:0.78rem;">
+                        🏷 Discounts
                     </a>
                 @endif
                 @if (auth()->user()->can('products.create') || auth()->user()->email === 'admin@admin.com')
-                    <a href="create_prodcut" class="btn btn-primary"> Add product</a>
+                    <button type="button" id="openImportTemplateBtn" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;" data-toggle="modal" data-target="#importTemplateModal" data-bs-toggle="modal" data-bs-target="#importTemplateModal">
+                        📄 Import
+                    </button>
+                    <a href="create_prodcut" class="btn btn-sm btn-primary" style="font-size:0.78rem;">+ Add Product</a>
                 @endif
-
                 @if (auth()->user()->can('discount.products.create') || auth()->user()->email === 'admin@admin.com')
-                    <button id="createDiscountBtn" class="btn btn-success btn-sm">
+                    <button id="createDiscountBtn" class="btn btn-sm btn-success" style="font-size:0.78rem;">
                         ➡ Create Discount
                     </button>
                 @endif
             </div>
-
         </div>
 
-        <div class="card-body">
+        <!-- Toolbar -->
+        <div class="table-toolbar">
+            <div class="product-search-bar flex-grow-1" style="max-width:420px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search_all" class="form-control"
+                    placeholder="Search by name, code, category, brand...">
+            </div>
+            <span class="product-count-badge">{{ $products->total() }} Products</span>
+        </div>
+
+        <div class="card-body p-0">
             @if (session()->has('success'))
-                <div class="alert alert-success alert-dismissible fade show">
+                <div class="alert alert-success alert-dismissible fade show m-3 mb-0">
                     ✅ {{ session('success') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
 
-            <div class="table-responsive">
-                <table id="productTable" class="table table-striped table-bordered align-middle nowrap" style="width:100%">
-                    <div class="mb-3">
-                        <input type="text" id="search_all" class="form-control"
-                            placeholder="Search Item Name, Code, Category, Brand">
-                    </div>
-
-                    <thead class="table-light">
+            <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch; overflow-y: visible;">
+                <table id="productTable" class="table table-hover align-middle mb-0" style="width:100%;">
+                    <thead>
                         <tr>
-                            <th><input type="checkbox" id="selectAll"></th>
-                            <th>#</th>
-                            <th>Code</th>
-                            <th>Image</th>
+                            <th style="width:30px;"><input type="checkbox" id="selectAll"></th>
+                            <th style="width:35px;">#</th>
+                            <th style="width:65px;">Code</th>
+                            <th style="width:55px;">Image</th>
                             <th>Category</th>
                             <th>Item Name</th>
-                            <th>Packing</th>
-                            <th>Pcs / Box</th>
-                            <th>Sale Price</th>
-                            <th>Sale Total</th>
-                            <th>Company</th>
-                            <th class="text-center">Action</th>
+                            <th style="width:80px;">Packing</th>
+                            <th style="width:65px;">Pcs/Box</th>
+                            <th style="width:95px;">Sale Price</th>
+                            <th style="width:90px;">Sale Total</th>
+                            <th style="width:90px;">Company</th>
+                            <th style="width:80px;" class="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,31 +256,34 @@
                                 <td class="text-success fw-bold">Rs. {{ number_format($product->total_price, 2) }}</td>
                                 <td>{{ $product->brand->name ?? '-' }}</td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-warning viewProductBtn"
-                                        data-id="{{ $product->id }}">
-                                        View
-                                    </button>
-
-
-                                    @if (auth()->user()->can('products.edit') || auth()->user()->email === 'admin@admin.com')
-                                        <a href="{{ route('products.edit', $product->id) }}"
-                                            class="btn btn-sm btn-outline-primary">
-                                            ✏ Edit
-                                        </a>
-                                    @endif
-
-                                    <a href="{{ route('product.batches', $product->id) }}"
-                                        class="btn btn-sm btn-outline-info">
-                                        📦 View Batch
-                                    </a>
-
-                                    {{-- 
-                                    <a href="{{ route('generate-barcode-image', $product->id) }}"
-                                        class="btn btn-sm btn-outline-success">
-                                        🏷 Barcode
-                                    </a> --}}
-
-
+                                    {{-- More Dropdown --}}
+                                    <div class="btn-group position-relative">
+                                        <button type="button" class="more-btn more-dropdown-btn">
+                                            ⋯ More
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end more-dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item viewProductBtn" href="#" data-id="{{ $product->id }}">
+                                                    <span class="di-icon" style="background:#eff6ff; color:#3b82f6;">👁</span>
+                                                    View Details
+                                                </a>
+                                            </li>
+                                            @if (auth()->user()->can('products.edit') || auth()->user()->email === 'admin@admin.com')
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('products.edit', $product->id) }}">
+                                                    <span class="di-icon" style="background:#f0fdf4; color:#16a34a;">✏️</span>
+                                                    Edit Product
+                                                </a>
+                                            </li>
+                                            @endif
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('product.batches', $product->id) }}">
+                                                    <span class="di-icon" style="background:#fef9c3; color:#ca8a04;">📦</span>
+                                                    View Batches
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
 
                                 </td>
                             </tr>
@@ -142,7 +291,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3 d-flex justify-content-end">
+            <div class="d-flex justify-content-end px-3 py-3 border-top bg-white" style="border-radius: 0 0 12px 12px;">
                 {{ $products->links() }}
             </div>
         </div>
@@ -156,7 +305,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Add Product</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p class="text-danger">Please use the main "Add Product" page for the new per-m² flow.</p>
@@ -185,7 +334,7 @@
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
 
                 <!-- Body -->
@@ -406,9 +555,86 @@
                 <!-- Footer -->
                 <div class="modal-footer border-top-0 bg-light rounded-bottom pb-3 pe-4">
                     <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm"
-                        data-bs-dismiss="modal">Close</button>
+                        data-bs-dismiss="modal" data-dismiss="modal">Close</button>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Product Import Modal (Bootstrap 5) -->
+    <div class="modal fade" id="importTemplateModal" tabindex="-1" aria-labelledby="importTemplateModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold text-dark"><i class="las la-file-excel fs-4 align-text-bottom text-success"></i> Import Products from CSV / Excel</h5>
+                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="importProductsForm" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body p-4">
+
+                        {{-- Step 1: Download Template --}}
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary mb-2">
+                                <span class="badge bg-primary me-1">Step 1</span> Download Template
+                            </h6>
+                            <p class="text-muted small mb-2">
+                                Download the CSV template, fill in your product data, then upload below.
+                                Your existing <code>products_raw.csv</code> format is also supported directly.
+                            </p>
+                            <a href="{{ route('products.download-template') }}" class="btn btn-success btn-sm fw-bold">
+                                <i class="las la-file-excel"></i> Download Excel Template (.xlsx)
+                            </a>
+                        </div>
+
+                        <hr class="my-3 text-muted">
+
+                        {{-- Step 2: Upload --}}
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-secondary mb-2">
+                                <span class="badge bg-primary me-1">Step 2</span> Upload Your File
+                            </h6>
+                            <label for="importFile" class="form-label fw-bold text-secondary">Select CSV or Excel File</label>
+                            <input type="file" class="form-control" id="importFile" name="file" accept=".csv, .xlsx" required>
+                            <div class="form-text text-muted mt-1 small">
+                                ✅ Accepts <strong>CSV</strong> (.csv) and <strong>Excel</strong> (.xlsx) files.<br>
+                                ✅ Compatible with your existing <strong>products_raw.csv</strong> format.<br>
+                                ✅ Categories, Subcategories & Brands auto-created if not found.<br>
+                                ✅ Data saved in: <strong>products</strong>, <strong>product_uoms</strong>, <strong>warehouse_stocks</strong>
+                            </div>
+                        </div>
+
+                        {{-- Step 3: Dummy Data Options --}}
+                        <div class="p-3 bg-light rounded border mb-3">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input" type="checkbox" id="autoFillDummyCheck" name="auto_fill_dummy" value="1">
+                                <label class="form-check-label fw-bold text-dark" for="autoFillDummyCheck">
+                                    <i class="las la-magic text-warning me-1"></i> Auto-fill missing Brand / Category with Editable Dummy Data
+                                </label>
+                            </div>
+                            <div class="text-muted small ms-4">
+                                If enabled, empty Brand or Category values will automatically be filled as <code>Unspecified Brand (Dummy)</code> or <code>Unspecified Category (Dummy)</code> so you can import without errors and edit later.
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-outline-warning fw-bold text-dark" id="importWithDummyBtn">
+                            <i class="las la-magic"></i> Auto-Fill Dummy &amp; Import
+                        </button>
+                        <div>
+                            <button type="button" class="btn btn-secondary me-1" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary" id="importSubmitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" id="importSpinner" role="status" aria-hidden="true"></span>
+                                <span id="importBtnText">Upload &amp; Import</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -419,8 +645,94 @@
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
+@endsection
+
+@section('js')
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    {{-- Fix: Dropdown single-active management, positioning & auto-close on click-outside/scroll --}}
+    <script>
+        $(document).ready(function() {
+            function closeAllMoreDropdowns() {
+                $('.more-dropdown-menu').removeClass('show');
+                $('.more-dropdown-btn').removeClass('active').attr('aria-expanded', 'false');
+            }
+
+            $(document).on('click', '.more-dropdown-btn', function(e) {
+                e.stopPropagation();
+                let $btn = $(this);
+                let $menu = $btn.next('.more-dropdown-menu');
+                let isOpen = $menu.hasClass('show');
+
+                // Close ALL open dropdowns first so multiple rows don't stack
+                closeAllMoreDropdowns();
+
+                if (!isOpen) {
+                    $menu.addClass('show');
+                    $btn.addClass('active').attr('aria-expanded', 'true');
+
+                    let rect = this.getBoundingClientRect();
+                    let menuWidth = $menu.outerWidth() || 180;
+                    let left = rect.right - menuWidth;
+                    let top = rect.bottom + 4;
+                    if (left < 4) left = 4;
+
+                    $menu.css({
+                        'position': 'fixed',
+                        'top': top + 'px',
+                        'left': left + 'px',
+                        'z-index': '10050',
+                        'transform': 'none'
+                    });
+                }
+            });
+
+            $(document).on('click', '.more-dropdown-menu .dropdown-item', function() {
+                closeAllMoreDropdowns();
+            });
+
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.btn-group').length) {
+                    closeAllMoreDropdowns();
+                }
+            });
+
+            $(window).add('.table-responsive, .main-content, body, div').on('scroll', function() {
+                closeAllMoreDropdowns();
+            });
+        });
+    </script>
+
+    <script>
+        function confirmDelete(productId) {
+            Swal.fire({
+                title: 'Delete Product?',
+                text: 'This action cannot be undone!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Delete!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/products/' + productId,
+                        type: 'DELETE',
+                        data: { _token: '{{ csrf_token() }}' },
+                        success: function(response) {
+                            Swal.fire('Deleted!', response.message || 'Product deleted.', 'success')
+                                .then(() => window.location.reload());
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error!', xhr.responseJSON?.message || 'Could not delete product.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
 
     {{-- product model --}}
     <script>
@@ -435,7 +747,7 @@
             $('#productViewModal').modal('show');
 
             $.ajax({
-                url: "/productview/" + productId,
+                url: "{{ url('productview') }}/" + productId,
                 type: "GET",
                 success: function(product) {
 
@@ -607,6 +919,10 @@
 
     <script>
         $(document).ready(function() {
+            // Open Import Modal
+            $('#openImportTemplateBtn').click(function() {
+                $('#importTemplateModal').modal('show');
+            });
 
             // Select/Deselect all checkboxes
             $('#selectAll').click(function() {
@@ -649,34 +965,24 @@
             }
 
             let table = $('#productTable').DataTable({
-                responsive: true,
+                responsive: false,
                 paging: false,
                 ordering: true,
                 info: false,
-                order: [
-                    [1, 'asc']
-                ],
-                dom: '<"top"f>rt<"bottom"><"clear">',
-                language: {
-                    search: "",
-                    searchPlaceholder: "Search by code, name, category, brand..."
-                },
+                order: [[1, 'asc']],
+                dom: 'rt',
+                scrollX: false,
                 columnDefs: [{
                     targets: [0, 11],
-                    searchable: false
-                }, ]
-            }); // Optional: fast typing experience 
-            $('.dataTables_filter input').off().on('keyup', function() {
-                table.search(this.value).draw();
+                    searchable: false,
+                    orderable: false
+                }]
             });
-            // ===== Initialize Products DataTable =====
 
         });
     </script>
 
     <!-- DataTables CSS -->
-@endsection
-<script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"></script>
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -706,7 +1012,7 @@
 
             if (categoryId) {
                 $.ajax({
-                    url: "/get-subcategories/" + categoryId,
+                    url: "{{ url('get-subcategories') }}/" + categoryId,
 
                     type: "GET",
                     data: {
@@ -737,7 +1043,7 @@
 
             if (categoryId) {
                 $.ajax({
-                    url: "/get-subcategories/" + categoryId,
+                    url: "{{ url('get-subcategories') }}/" + categoryId,
 
                     type: "GET",
                     data: {
@@ -760,5 +1066,151 @@
                 $('#edit_sub_category').html('<option value="">Select Sub-Category</option>');
             }
         });
+
+        // Click handler for direct "Auto-Fill Dummy & Import" button in modal
+        $(document).on('click', '#importWithDummyBtn', function(e) {
+            $('#autoFillDummyCheck').prop('checked', true);
+            $('#importProductsForm').submit();
+        });
+
+        // Handle import form submission
+        $(document).on('submit', '#importProductsForm', function(e) {
+            e.preventDefault();
+
+            let formData = new FormData(this);
+            let submitBtn = $('#importSubmitBtn');
+            let dummyBtn  = $('#importWithDummyBtn');
+            let spinner   = $('#importSpinner');
+            let btnText   = $('#importBtnText');
+
+            // Set loading state
+            submitBtn.prop('disabled', true);
+            dummyBtn.prop('disabled', true);
+            spinner.removeClass('d-none');
+            btnText.text('Importing...');
+
+            $.ajax({
+                url: "{{ route('products.import') }}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    // Reset loading state
+                    submitBtn.prop('disabled', false);
+                    dummyBtn.prop('disabled', false);
+                    spinner.addClass('d-none');
+                    btnText.text('Upload & Import');
+                    $('#importTemplateModal').modal('hide');
+                    $('#importProductsForm')[0].reset();
+
+                    var imported  = response.imported_count  || 0;
+                    var skipped   = response.skipped_count   || 0;
+                    var dummy     = response.dummy_count     || 0;
+                    var duplicate = response.duplicate_count || 0;
+
+                    var statsHtml =
+                        '<div style="display:flex;gap:10px;justify-content:center;margin:18px 0 10px;flex-wrap:wrap">' +
+
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1.5px solid #6ee7b7;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#059669;line-height:1">' + imported + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">✅ Imported</div>' +
+                        '</div>' +
+
+                        (duplicate > 0 ?
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#fef2f2,#fecaca);border:1.5px solid #f87171;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#dc2626;line-height:1">' + duplicate + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">⛔ Duplicates</div>' +
+                        '</div>' : '') +
+
+                        (skipped > 0 ?
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fbbf24;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#d97706;line-height:1">' + skipped + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">⏭ Skipped</div>' +
+                        '</div>' : '') +
+
+                        (dummy > 0 ?
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#2563eb;line-height:1">' + dummy + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">🤖 Dummy</div>' +
+                        '</div>' : '') +
+
+                        '</div>' +
+
+                        (duplicate > 0 ?
+                        '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#b91c1c;margin-top:6px">' +
+                        '<b>⛔ Duplicates Skipped:</b> ' + duplicate + ' product(s) already exist by item code or name+brand and were not imported again.' +
+                        '</div>' : '') +
+
+                        (response.errors && response.errors.length ?
+                        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:0.75rem;color:#475569;margin-top:6px;max-height:100px;overflow-y:auto;text-align:left">' +
+                        '<b>Details:</b><ul style="margin:4px 0 0 12px;padding:0">' +
+                        response.errors.map(function(e){ return '<li>' + e + '</li>'; }).join('') +
+                        '</ul></div>' : '');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '<span style="font-size:1.15rem;font-weight:800;color:#065f46">✅ Import Successful!</span>',
+                        html: statsHtml,
+                        confirmButtonText: 'Great, Refresh Page!',
+                        confirmButtonColor: '#059669',
+                        customClass: { confirmButton: 'btn btn-success fw-bold px-5' }
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    // Reset loading state
+                    submitBtn.prop('disabled', false);
+                    dummyBtn.prop('disabled', false);
+                    spinner.addClass('d-none');
+                    btnText.text('Upload & Import');
+
+                    let response = xhr.responseJSON || {};
+                    let message = response.message || 'An error occurred while importing products.';
+
+                    if (response.type === 'column_mismatch') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Column Mismatch',
+                            html: `Your CSV file is missing required columns:<br><strong class="text-danger">${message}</strong>.<br><br>Please download the CSV template for reference.`,
+                            confirmButtonText: 'Understood',
+                            customClass: {
+                                confirmButton: 'btn btn-warning'
+                            }
+                        });
+                    } else if (response.can_auto_fill) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Import Validation Errors',
+                            html: message,
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="las la-magic me-1"></i> Auto-Fill Missing Fields & Import Now',
+                            cancelButtonText: 'Cancel',
+                            customClass: {
+                                confirmButton: 'btn btn-warning fw-bold me-2',
+                                cancelButton: 'btn btn-secondary'
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                $('#autoFillDummyCheck').prop('checked', true);
+                                $('#importProductsForm').submit();
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Import Failed',
+                            html: message,
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                confirmButton: 'btn btn-danger'
+                            }
+                        });
+                    }
+                }
+            });
+        });
     });
 </script>
+@endsection

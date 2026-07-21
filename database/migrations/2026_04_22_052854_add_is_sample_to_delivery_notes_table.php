@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
-            $table->boolean('is_sample')->default(false)->after('note');
-        });
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('delivery_notes', 'is_sample')) {
+
+                $table->boolean('is_sample')->default(false)->after('note');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
             $table->dropColumn('is_sample');
-        });
+            });
+}
     }
 };

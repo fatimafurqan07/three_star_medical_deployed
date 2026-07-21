@@ -11,15 +11,48 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
-            // $table->text('address')->nullable()->after('phone'); // Already exists, skip to avoid duplicate error
-            // $table->boolean('is_docs_submitted')->default(false)->after('status'); // Already exists, skip to avoid duplicate error
-            $table->string('document_degree')->nullable()->after('is_docs_submitted');
-            $table->string('document_certificate')->nullable()->after('document_degree');
-            $table->string('document_hsc_marksheet')->nullable()->after('document_certificate'); // Intermediate
-            $table->string('document_ssc_marksheet')->nullable()->after('document_hsc_marksheet'); // 10th
-            $table->string('document_cv')->nullable()->after('document_ssc_marksheet');
-        });
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
+            //
+ if (!Schema::hasColumn('hr_employees', 'address')) {
+     $table->text('address')->nullable()->after('phone');
+ } // Already exists, skip to avoid duplicate error
+            //
+ if (!Schema::hasColumn('hr_employees', 'is_docs_submitted')) {
+     $table->boolean('is_docs_submitted')->default(false)->after('status');
+ } // Already exists, skip to avoid duplicate error
+
+            if (!Schema::hasColumn('hr_employees', 'document_degree')) {
+
+                $table->string('document_degree')->nullable()->after('is_docs_submitted');
+
+            }
+
+            if (!Schema::hasColumn('hr_employees', 'document_certificate')) {
+
+                $table->string('document_certificate')->nullable()->after('document_degree');
+
+            }
+
+            if (!Schema::hasColumn('hr_employees', 'document_hsc_marksheet')) {
+
+                $table->string('document_hsc_marksheet')->nullable()->after('document_certificate');
+
+            } // Intermediate
+
+            if (!Schema::hasColumn('hr_employees', 'document_ssc_marksheet')) {
+
+                $table->string('document_ssc_marksheet')->nullable()->after('document_hsc_marksheet');
+
+            } // 10th
+
+            if (!Schema::hasColumn('hr_employees', 'document_cv')) {
+
+                $table->string('document_cv')->nullable()->after('document_ssc_marksheet');
+
+            }
+            });
+}
     }
 
     /**
@@ -27,7 +60,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             // $table->dropColumn('address'); // Do not drop, since we did not add in this migration
             // $table->dropColumn('is_docs_submitted'); // Do not drop, since we did not add in this migration
             $table->dropColumn([
@@ -37,6 +71,7 @@ return new class extends Migration
                 'document_ssc_marksheet',
                 'document_cv',
             ]);
-        });
+            });
+}
     }
 };

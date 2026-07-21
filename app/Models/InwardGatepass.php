@@ -17,6 +17,11 @@ class InwardGatepass extends Model
     {
         return $this->hasMany(InwardGatepassItem::class);
     }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
     public function branch()
     {
         return $this->belongsTo(Branch::class);

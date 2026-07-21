@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
             DB::statement('ALTER TABLE `warehouse_stocks` CHANGE `pieces_per_box` `total_pieces` INT(11) DEFAULT 0');
-        });
+            });
+}
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
             $table->renameColumn('total_pieces', 'pieces_per_box');
-        });
+            });
+}
     }
 };

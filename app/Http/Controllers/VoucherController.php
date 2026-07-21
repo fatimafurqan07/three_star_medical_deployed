@@ -129,7 +129,7 @@ class VoucherController extends Controller
             \App\Models\VoucherMaster::TYPE_JOURNAL,
         ])
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
-            ->with('party') // Eager load the polymorphic party
+            ->with(['party', 'createdBy']) // Eager load party and creator
             ->orderBy('id', 'DESC')
             ->get();
 
@@ -996,7 +996,7 @@ class VoucherController extends Controller
         // V2: Fetch from VoucherMaster where type is PAYMENT
         $receipts = \App\Models\VoucherMaster::where('voucher_type', \App\Models\VoucherMaster::TYPE_PAYMENT)
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
-            ->with('party') // Eager load the polymorphic party
+            ->with(['party', 'createdBy']) // Eager load party and creator
             ->orderBy('id', 'DESC')
             ->get();
 
@@ -1495,7 +1495,7 @@ class VoucherController extends Controller
         $branchId = $this->getBranchId();
 
         // ── Legacy ExpenseVoucher records ─────────────────────────────────────
-        $legacyRecords = \App\Models\ExpenseVoucher::orderBy('id', 'DESC')->get();
+        $legacyRecords = \App\Models\ExpenseVoucher::with('voucherMaster.createdBy')->orderBy('id', 'DESC')->get();
 
         foreach ($legacyRecords as $voucher) {
             $partyName = '-';

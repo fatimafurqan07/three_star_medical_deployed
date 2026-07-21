@@ -122,6 +122,13 @@
                                                 <div class="d-flex flex-column">
                                                     <span class="fw-bold text-dark">{{ $purchase->invoice_no }}</span>
                                                     <span class="text-muted small">{{ \Carbon\Carbon::parse($purchase->purchase_date)->format('d M, Y') }}</span>
+                                                    @if($purchase->createdBy)
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-light text-muted fw-bold" style="font-size: 0.65rem; border: 1px dashed #e2e8f0; padding: 2px 6px; border-radius: 4px;">
+                                                                <i class="fas fa-user me-1"></i>{{ $purchase->createdBy->name }}
+                                                            </span>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </td>
                                             <td>

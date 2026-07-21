@@ -11,16 +11,45 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->decimal('total_gst', 15, 2)->default(0)->after('total_bill_amount');
-            $table->string('sale_order_no')->nullable()->after('invoice_no');
-            $table->date('so_date')->nullable()->after('sale_order_no');
-        });
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
 
-        Schema::table('sale_items', function (Blueprint $table) {
-            $table->decimal('gst_percent', 8, 2)->default(0)->after('discount_amount');
-            $table->decimal('gst_amount', 15, 2)->default(0)->after('gst_percent');
-        });
+            if (!Schema::hasColumn('sales', 'total_gst')) {
+
+                $table->decimal('total_gst', 15, 2)->default(0)->after('total_bill_amount');
+
+            }
+
+            if (!Schema::hasColumn('sales', 'sale_order_no')) {
+
+                $table->string('sale_order_no')->nullable()->after('invoice_no');
+
+            }
+
+            if (!Schema::hasColumn('sales', 'so_date')) {
+
+                $table->date('so_date')->nullable()->after('sale_order_no');
+
+            }
+            });
+}
+
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_items', 'gst_percent')) {
+
+                $table->decimal('gst_percent', 8, 2)->default(0)->after('discount_amount');
+
+            }
+
+            if (!Schema::hasColumn('sale_items', 'gst_amount')) {
+
+                $table->decimal('gst_amount', 15, 2)->default(0)->after('gst_percent');
+
+            }
+            });
+}
     }
 
     /**
@@ -28,12 +57,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $table->dropColumn(['total_gst', 'sale_order_no', 'so_date']);
-        });
+            });
+}
 
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             $table->dropColumn(['gst_percent', 'gst_amount']);
-        });
+            });
+}
     }
 };

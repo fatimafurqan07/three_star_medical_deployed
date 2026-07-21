@@ -31,7 +31,7 @@ class InwardgatepassController extends Controller
     public function index()
     {
         $branchId = $this->getBranchId();
-        $gatepasses = InwardGatepass::with('items.product', 'branch', 'warehouse', 'vendor')
+        $gatepasses = InwardGatepass::with('items.product', 'branch', 'warehouse', 'vendor', 'createdBy')
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->latest()
             ->get();

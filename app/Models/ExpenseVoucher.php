@@ -17,4 +17,9 @@ class ExpenseVoucher extends Model
         $nextId = $last ? $last->id + 1 : 1;
         return 'EVID-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
     }
+
+    public function voucherMaster()
+    {
+        return $this->hasOne(VoucherMaster::class, 'voucher_no', 'evid');
+    }
 }

@@ -604,12 +604,19 @@
             <div class="filter-row">
                 <!-- Warehouse -->
                 <div class="filter-group">
-                    <label>Warehouse</label>
+                    <label>Location (Shop / Warehouse)</label>
                     <select id="sel_warehouse" class="form-control select2-global">
-                        <option value="">All Warehouses</option>
-                        @foreach($warehouses as $w)
-                            <option value="{{ $w->id }}">{{ $w->warehouse_name }}</option>
-                        @endforeach
+                        <option value="">All Locations</option>
+                        <optgroup label="🏪 Shops (Retail)">
+                            @foreach ($shops as $sh)
+                                <option value="{{ $sh->id }}">{{ $sh->warehouse_name }}</option>
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="🏭 Warehouses (Storage)">
+                            @foreach ($warehouses as $wh)
+                                <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
+                            @endforeach
+                        </optgroup>
                     </select>
                 </div>
                 <!-- Branch -->

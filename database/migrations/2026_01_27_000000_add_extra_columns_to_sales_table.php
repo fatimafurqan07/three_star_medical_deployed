@@ -11,10 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('sales')) {
+            return;
+        }
         Schema::table('sales', function (Blueprint $table) {
-            $table->text('per_total_pieces')->nullable()->after('per_total');
-            $table->text('per_price_per_piece')->nullable()->after('per_total_pieces');
-            $table->text('per_price_per_m2')->nullable()->after('per_price_per_piece');
+            if (!Schema::hasColumn('sales', 'per_total_pieces')) {
+                $table->text('per_total_pieces')->nullable()->after('per_total');
+            }
+            if (!Schema::hasColumn('sales', 'per_price_per_piece')) {
+                $table->text('per_price_per_piece')->nullable()->after('per_total_pieces');
+            }
+            if (!Schema::hasColumn('sales', 'per_price_per_m2')) {
+                $table->text('per_price_per_m2')->nullable()->after('per_price_per_piece');
+            }
         });
     }
 

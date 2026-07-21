@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $columns = [
                 'product_code', 'brand', 'unit', 'per_price', 'per_discount',
                 'qty', 'per_total', 'color',
@@ -23,7 +24,8 @@ return new class extends Migration
                     $table->dropColumn($column);
                 }
             }
-        });
+            });
+}
     }
 
     /**
@@ -31,20 +33,82 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             // Restore as nullable text
-            $table->text('product_code')->nullable();
-            $table->text('brand')->nullable();
-            $table->text('unit')->nullable();
-            $table->text('per_price')->nullable();
-            $table->text('per_discount')->nullable();
-            $table->text('qty')->nullable();
-            $table->text('per_total')->nullable();
-            $table->text('color')->nullable();
-            $table->text('per_total_pieces')->nullable();
-            $table->text('per_price_per_piece')->nullable();
-            $table->text('per_price_per_m2')->nullable();
-            $table->text('per_loose_pieces')->nullable();
-        });
+
+            if (!Schema::hasColumn('sales', 'product_code')) {
+
+                $table->text('product_code')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'brand')) {
+
+                $table->text('brand')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'unit')) {
+
+                $table->text('unit')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_price')) {
+
+                $table->text('per_price')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_discount')) {
+
+                $table->text('per_discount')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'qty')) {
+
+                $table->text('qty')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_total')) {
+
+                $table->text('per_total')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'color')) {
+
+                $table->text('color')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_total_pieces')) {
+
+                $table->text('per_total_pieces')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_price_per_piece')) {
+
+                $table->text('per_price_per_piece')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_price_per_m2')) {
+
+                $table->text('per_price_per_m2')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('sales', 'per_loose_pieces')) {
+
+                $table->text('per_loose_pieces')->nullable();
+
+            }
+            });
+}
     }
 };

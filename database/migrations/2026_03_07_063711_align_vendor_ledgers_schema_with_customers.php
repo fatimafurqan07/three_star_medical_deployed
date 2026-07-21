@@ -11,11 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vendor_ledgers', function (Blueprint $table) {
-            $table->decimal('opening_balance', 15, 2)->default(0)->nullable()->change();
-            $table->decimal('previous_balance', 15, 2)->default(0)->change();
-            $table->decimal('closing_balance', 15, 2)->default(0)->change();
-        });
+        if (Schema::hasTable('vendor_ledgers')) {
+    Schema::table('vendor_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendor_ledgers', 'opening_balance')) {
+
+                $table->decimal('opening_balance', 15, 2)->default(0)->nullable()->change();
+
+            }
+
+            if (!Schema::hasColumn('vendor_ledgers', 'previous_balance')) {
+
+                $table->decimal('previous_balance', 15, 2)->default(0)->change();
+
+            }
+
+            if (!Schema::hasColumn('vendor_ledgers', 'closing_balance')) {
+
+                $table->decimal('closing_balance', 15, 2)->default(0)->change();
+
+            }
+            });
+}
     }
 
     /**
@@ -23,10 +40,27 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vendor_ledgers', function (Blueprint $table) {
-            $table->text('opening_balance')->nullable(false)->change();
-            $table->text('previous_balance')->nullable(false)->change();
-            $table->text('closing_balance')->nullable(false)->change();
-        });
+        if (Schema::hasTable('vendor_ledgers')) {
+    Schema::table('vendor_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendor_ledgers', 'opening_balance')) {
+
+                $table->text('opening_balance')->nullable(false)->change();
+
+            }
+
+            if (!Schema::hasColumn('vendor_ledgers', 'previous_balance')) {
+
+                $table->text('previous_balance')->nullable(false)->change();
+
+            }
+
+            if (!Schema::hasColumn('vendor_ledgers', 'closing_balance')) {
+
+                $table->text('closing_balance')->nullable(false)->change();
+
+            }
+            });
+}
     }
 };

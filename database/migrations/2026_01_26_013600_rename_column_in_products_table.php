@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             // Check if modification is needed (for safety in mixed environments)
             if (Schema::hasColumn('products', 'sale_price_per_piece')) {
                 DB::statement("ALTER TABLE products CHANGE sale_price_per_piece sale_price_per_box DECIMAL(12,2) DEFAULT 0");
             }
-        });
+            });
+}
     }
 
     /**
@@ -24,10 +26,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             if (Schema::hasColumn('products', 'sale_price_per_box')) {
                 DB::statement("ALTER TABLE products CHANGE sale_price_per_box sale_price_per_piece DECIMAL(12,2) DEFAULT 0");
             }
-        });
+            });
+}
     }
 };

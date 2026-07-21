@@ -338,11 +338,18 @@
                                         <td>
                                             <span class="fw-800 font-monospace text-dark">{{ $dc->dc_no }}</span>
                                             @if ($dc->is_sample)
-                                                <span class="badge bg-info text-white ms-1" style="font-size: 0.6rem;">SAMPLE</span>
+                                                <span class="badge bg-info text-white ms-1" style="font-size: 0.65rem;">SAMPLE</span>
                                             @endif
                                             <br>
                                             <small class="text-muted"><i
                                                     class="far fa-calendar-alt me-1"></i>{{ \Carbon\Carbon::parse($dc->delivery_date)->format('d M, Y') }}</small>
+                                            @if($dc->createdBy)
+                                                <div class="mt-1">
+                                                    <span class="badge bg-light text-muted fw-bold" style="font-size: 0.65rem; border: 1px dashed #e2e8f0; padding: 2px 6px; border-radius: 4px;">
+                                                        <i class="fas fa-user me-1"></i>{{ $dc->createdBy->name }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </td>
                                         <td>
                                             <span class="badge-dc">{{ $dc->sale->invoice_no ?? 'N/A' }}</span>

@@ -11,10 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
             //
-             $table->decimal('opening_balance', 15, 2)->default(0)->after('closing_balance');
-        });
+
+             if (!Schema::hasColumn('customer_ledgers', 'opening_balance')) {
+
+                 $table->decimal('opening_balance', 15, 2)->default(0)->after('closing_balance');
+
+             }
+            });
+}
     }
 
     /**
@@ -22,9 +29,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
             //
             $table->dropColumn('opening_balance');
-        });
+            });
+}
     }
 };

@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
-            $table->string('weekly_off')->nullable()->after('address');
-        });
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_employees', 'weekly_off')) {
+
+                $table->string('weekly_off')->nullable()->after('address');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,10 +28,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             if (Schema::hasColumn('hr_employees', 'weekly_off')) {
                 $table->dropColumn('weekly_off');
             }
-        });
+            });
+}
     }
 };

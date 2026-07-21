@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
             $table->dropColumn(['boxes_quantity', 'loose_pieces']);
-        });
+            });
+}
     }
 
     /**
@@ -21,9 +23,21 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
-            $table->integer('boxes_quantity')->default(0)->after('quantity');
-            $table->integer('loose_pieces')->default(0)->after('quantity');
-        });
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('warehouse_stocks', 'boxes_quantity')) {
+
+                $table->integer('boxes_quantity')->default(0)->after('quantity');
+
+            }
+
+            if (!Schema::hasColumn('warehouse_stocks', 'loose_pieces')) {
+
+                $table->integer('loose_pieces')->default(0)->after('quantity');
+
+            }
+            });
+}
     }
 };

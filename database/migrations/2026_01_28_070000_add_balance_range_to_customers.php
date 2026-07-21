@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
             if (!Schema::hasColumn('customers', 'balance_range')) {
-                $table->decimal('balance_range', 12, 2)->default(0)->after('opening_balance');
+
+                if (!Schema::hasColumn('customers', 'balance_range')) {
+
+                    $table->decimal('balance_range', 12, 2)->default(0)->after('opening_balance');
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -23,10 +30,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
             if (Schema::hasColumn('customers', 'balance_range')) {
                 $table->dropColumn('balance_range');
             }
-        });
+            });
+}
     }
 };

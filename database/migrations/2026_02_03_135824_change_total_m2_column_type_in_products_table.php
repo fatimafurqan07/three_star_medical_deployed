@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->decimal('total_m2', 10, 2)->change();
-        });
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('products', 'total_m2')) {
+
+                $table->decimal('total_m2', 10, 2)->change();
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->decimal('total_m2', 12, 4)->change();
-        });
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('products', 'total_m2')) {
+
+                $table->decimal('total_m2', 12, 4)->change();
+
+            }
+            });
+}
     }
 };

@@ -25,6 +25,7 @@ class SaleReturn extends Model
         'balance',
         'remarks',
         'status',
+        'created_by',
     ];
 
     protected $casts = [
@@ -41,6 +42,11 @@ class SaleReturn extends Model
     public function sale()
     {
         return $this->belongsTo(Sale::class);
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function customer()

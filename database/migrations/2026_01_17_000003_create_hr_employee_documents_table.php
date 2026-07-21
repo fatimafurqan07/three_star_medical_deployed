@@ -21,7 +21,8 @@ return new class extends Migration
 
         // Drop the columns from hr_employees if they exist (cleanup from previous step)
         if (Schema::hasColumn('hr_employees', 'document_degree')) {
-            Schema::table('hr_employees', function (Blueprint $table) {
+            if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
                 $table->dropColumn([
                     'document_degree',
                     'document_certificate',
@@ -29,7 +30,8 @@ return new class extends Migration
                     'document_ssc_marksheet',
                     'document_cv'
                 ]);
-            });
+                });
+}
         }
     }
 

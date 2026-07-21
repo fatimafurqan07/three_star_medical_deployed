@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sale_items', function (Blueprint $table) {
-            $table->decimal('free_qty', 15, 2)->default(0)->after('qty');
-            $table->decimal('free_total_pieces', 15, 2)->default(0)->after('total_pieces');
-        });
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_items', 'free_qty')) {
+
+                $table->decimal('free_qty', 15, 2)->default(0)->after('qty');
+
+            }
+
+            if (!Schema::hasColumn('sale_items', 'free_total_pieces')) {
+
+                $table->decimal('free_total_pieces', 15, 2)->default(0)->after('total_pieces');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             $table->dropColumn(['free_qty', 'free_total_pieces']);
-        });
+            });
+}
     }
 };

@@ -557,6 +557,7 @@ class PurchaseController extends Controller
                     'status_purchase' => $status,
                     'enable_hs_code' => $request->enable_hs_code ? 1 : 0,
                     'po_ref' => $request->purchase_order_no,
+                    'created_by' => auth()->id() ?? 1,
                 ]);
             }
 
@@ -1803,6 +1804,7 @@ class PurchaseController extends Controller
                 'net_amount' => 0,
                 'paid' => 0,
                 'balance' => 0,
+                'created_by' => auth()->id() ?? 1,
             ]);
 
             $subtotal = 0;
@@ -2079,7 +2081,7 @@ class PurchaseController extends Controller
     public function purchaseReturnIndex()
     {
         $branchId = $this->getBranchId();
-        $returns = \App\Models\PurchaseReturn::with(['vendor', 'warehouse', 'purchase', 'items.product'])
+        $returns = \App\Models\PurchaseReturn::with(['vendor', 'warehouse', 'purchase', 'items.product', 'createdBy'])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
             ->get();

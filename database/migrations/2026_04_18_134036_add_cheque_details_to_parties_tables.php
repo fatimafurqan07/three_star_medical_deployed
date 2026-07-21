@@ -11,17 +11,51 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
-            $table->string('bank_name')->nullable()->after('payment_mode');
-            $table->string('cheque_no')->nullable()->after('bank_name');
-            $table->date('cheque_date')->nullable()->after('cheque_no');
-        });
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
 
-        Schema::table('vendors', function (Blueprint $table) {
-            $table->string('bank_name')->nullable()->after('payment_mode');
-            $table->string('cheque_no')->nullable()->after('bank_name');
-            $table->date('cheque_date')->nullable()->after('cheque_no');
-        });
+            if (!Schema::hasColumn('customers', 'bank_name')) {
+
+                $table->string('bank_name')->nullable()->after('payment_mode');
+
+            }
+
+            if (!Schema::hasColumn('customers', 'cheque_no')) {
+
+                $table->string('cheque_no')->nullable()->after('bank_name');
+
+            }
+
+            if (!Schema::hasColumn('customers', 'cheque_date')) {
+
+                $table->date('cheque_date')->nullable()->after('cheque_no');
+
+            }
+            });
+}
+
+        if (Schema::hasTable('vendors')) {
+    Schema::table('vendors', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendors', 'bank_name')) {
+
+                $table->string('bank_name')->nullable()->after('payment_mode');
+
+            }
+
+            if (!Schema::hasColumn('vendors', 'cheque_no')) {
+
+                $table->string('cheque_no')->nullable()->after('bank_name');
+
+            }
+
+            if (!Schema::hasColumn('vendors', 'cheque_date')) {
+
+                $table->date('cheque_date')->nullable()->after('cheque_no');
+
+            }
+            });
+}
     }
 
     /**
@@ -29,12 +63,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customers', function (Blueprint $table) {
+        if (Schema::hasTable('customers')) {
+    Schema::table('customers', function (Blueprint $table) {
             $table->dropColumn(['bank_name', 'cheque_no', 'cheque_date']);
-        });
+            });
+}
 
-        Schema::table('vendors', function (Blueprint $table) {
+        if (Schema::hasTable('vendors')) {
+    Schema::table('vendors', function (Blueprint $table) {
             $table->dropColumn(['bank_name', 'cheque_no', 'cheque_date']);
-        });
+            });
+}
     }
 };

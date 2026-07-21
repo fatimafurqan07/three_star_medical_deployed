@@ -494,7 +494,16 @@
                                 @endphp
                                 <tr data-heads="{{ $item->row_account_head ?? '[]' }}" data-accounts="{{ $item->row_account_id ?? '[]' }}">
                                     <td class="row-num">{{ $loop->iteration }}</td>
-                                    <td><span class="vch-no">{{ $item->evid }}</span></td>
+                                    <td>
+                                        <span class="vch-no">{{ $item->evid }}</span>
+                                        @if($item->voucherMaster && $item->voucherMaster->createdBy)
+                                            <div class="mt-1">
+                                                <span class="badge bg-light text-muted fw-bold" style="font-size: 0.65rem; border: 1px dashed #e2e8f0; padding: 2px 6px; border-radius: 4px;">
+                                                    <i class="bi bi-person me-1"></i>{{ $item->voucherMaster->createdBy->name }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td style="color:#6b7a99;font-size:.86rem;"><i
                                             class="bi bi-calendar3 me-1"></i>{{ $item->entry_date }}</td>
                                     <td><span class="badge-type">{{ $item->type_label }}</span></td>

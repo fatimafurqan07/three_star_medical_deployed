@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             // Drop columns
             // Using array to drop multiple columns is cleaner if database driver supports it (MySQL does)
             $table->dropColumn([
@@ -24,26 +25,69 @@ return new class extends Migration
                 'piece_per_pack', // Unit per Packing
                 'loose_piece',     // Loose Piece
             ]);
-        });
+            });
+}
 
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             // Limit `size_mode` to configured enum or string. Default 'by_size'.
-            $table->string('size_mode')->default('by_size')->after('item_name');
+
+            if (!Schema::hasColumn('products', 'size_mode')) {
+
+                $table->string('size_mode')->default('by_size')->after('item_name');
+
+            }
 
             // Dimensions
-            $table->decimal('height', 8, 2)->nullable()->after('size_mode')->comment('Height in cm');
-            $table->decimal('width', 8, 2)->nullable()->after('height')->comment('Width in cm');
+
+            if (!Schema::hasColumn('products', 'height')) {
+
+                $table->decimal('height', 8, 2)->nullable()->after('size_mode')->comment('Height in cm');
+
+            }
+
+            if (!Schema::hasColumn('products', 'width')) {
+
+                $table->decimal('width', 8, 2)->nullable()->after('height')->comment('Width in cm');
+
+            }
 
             // Box/Packing
             // "pieces_per_box" replaces maybe "piece_per_pack"
-            $table->integer('pieces_per_box')->default(0)->after('width');
-            $table->integer('boxes_quantity')->default(0)->after('pieces_per_box');
+
+            if (!Schema::hasColumn('products', 'pieces_per_box')) {
+
+                $table->integer('pieces_per_box')->default(0)->after('width');
+
+            }
+
+            if (!Schema::hasColumn('products', 'boxes_quantity')) {
+
+                $table->integer('boxes_quantity')->default(0)->after('pieces_per_box');
+
+            }
 
             // Calculated fields
-            $table->decimal('total_m2', 12, 4)->default(0)->after('boxes_quantity');
-            $table->decimal('price_per_m2', 12, 2)->default(0)->after('total_m2'); // Sale Price per m2
-            $table->decimal('total_price', 15, 2)->default(0)->after('price_per_m2'); // Sale Total
-        });
+
+            if (!Schema::hasColumn('products', 'total_m2')) {
+
+                $table->decimal('total_m2', 12, 4)->default(0)->after('boxes_quantity');
+
+            }
+
+            if (!Schema::hasColumn('products', 'price_per_m2')) {
+
+                $table->decimal('price_per_m2', 12, 2)->default(0)->after('total_m2');
+
+            } // Sale Price per m2
+
+            if (!Schema::hasColumn('products', 'total_price')) {
+
+                $table->decimal('total_price', 15, 2)->default(0)->after('price_per_m2');
+
+            } // Sale Total
+            });
+}
     }
 
     /**
@@ -51,7 +95,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             // Drop added columns
             $table->dropColumn([
                 'size_mode',
@@ -63,18 +108,61 @@ return new class extends Migration
                 'price_per_m2',
                 'total_price',
             ]);
-        });
+            });
+}
 
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             // Restore removed columns (types must match original migrations)
-            $table->text('price')->nullable();
-            $table->text('wholesale_price')->nullable();
-            $table->text('initial_stock')->nullable();
-            $table->integer('alert_quantity')->nullable();
-            $table->string('pack_type')->nullable();
-            $table->string('pack_qty')->nullable();
-            $table->string('piece_per_pack')->nullable();
-            $table->string('loose_piece')->nullable();
-        });
+
+            if (!Schema::hasColumn('products', 'price')) {
+
+                $table->text('price')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'wholesale_price')) {
+
+                $table->text('wholesale_price')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'initial_stock')) {
+
+                $table->text('initial_stock')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'alert_quantity')) {
+
+                $table->integer('alert_quantity')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'pack_type')) {
+
+                $table->string('pack_type')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'pack_qty')) {
+
+                $table->string('pack_qty')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'piece_per_pack')) {
+
+                $table->string('piece_per_pack')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'loose_piece')) {
+
+                $table->string('loose_piece')->nullable();
+
+            }
+            });
+}
     }
 };

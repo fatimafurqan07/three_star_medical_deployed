@@ -8,15 +8,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
-            $table->string('status')->default('completed')->after('note'); // completed, cancelled
-        });
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('delivery_notes', 'status')) {
+
+                $table->string('status')->default('completed')->after('note');
+
+            } // completed, cancelled
+            });
+}
     }
 
     public function down(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
             $table->dropColumn('status');
-        });
+            });
+}
     }
 };

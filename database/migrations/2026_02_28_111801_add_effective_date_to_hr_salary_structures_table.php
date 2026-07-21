@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
-            $table->date('effective_date')->nullable()->after('leave_salary_per_day');
-        });
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_salary_structures', 'effective_date')) {
+
+                $table->date('effective_date')->nullable()->after('leave_salary_per_day');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 };

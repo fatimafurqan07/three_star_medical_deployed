@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchase_returns', function (Blueprint $table) {
+        if (Schema::hasTable('purchase_returns')) {
+    Schema::table('purchase_returns', function (Blueprint $table) {
             $table->foreignId('purchase_id')->nullable()->after('id')->constrained('purchases')->onDelete('set null');
-        });
+            });
+}
     }
 
     /**
@@ -21,9 +23,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchase_returns', function (Blueprint $table) {
+        if (Schema::hasTable('purchase_returns')) {
+    Schema::table('purchase_returns', function (Blueprint $table) {
             $table->dropForeign(['purchase_id']);
             $table->dropColumn('purchase_id');
-        });
+            });
+}
     }
 };

@@ -55,6 +55,11 @@ class Purchase extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);

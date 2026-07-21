@@ -32,7 +32,16 @@
                                         <tbody class="text-center">
                                             @foreach ($gatepasses as $gp)
                                                 <tr>
-                                                    <td>{{ $gp->id }}</td>
+                                                    <td>
+                                                        {{ $gp->id }}
+                                                        @if($gp->createdBy)
+                                                            <div class="mt-1">
+                                                                <span class="badge bg-light text-muted fw-bold" style="font-size: 0.65rem; border: 1px dashed #ced4da; padding: 2px 6px; border-radius: 4px;">
+                                                                    <i class="fas fa-user me-1"></i>{{ $gp->createdBy->name }}
+                                                                </span>
+                                                            </div>
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $gp->branch->name ?? 'N/A' }}</td>
                                                     <td>{{ $gp->warehouse->warehouse_name ?? 'N/A' }}</td>
                                                     <td>{{ $gp->vendor->name ?? 'N/A' }}</td>

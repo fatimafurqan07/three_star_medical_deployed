@@ -250,9 +250,30 @@
             S.brandId    = $('#psmBrandFilter').val();
             _fetch(true);
         });
+
+        /* Live Search on Input (Debounced at 300ms) */
+        var searchTimeout = null;
+        $('#psmSearchInput').on('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function () {
+                S.query      = $('#psmSearchInput').val().trim();
+                S.categoryId = $('#psmCategoryFilter').val();
+                S.brandId    = $('#psmBrandFilter').val();
+                _fetch(true);
+            }, 300);
+        });
+
         $('#psmSearchInput').on('keydown', function (e) {
             if (e.key === 'Enter') { e.preventDefault(); $('#psmBtnSearch').trigger('click'); }
         });
+
+        /* Instant Search on Dropdown Filters Change */
+        $('#psmCategoryFilter, #psmBrandFilter').on('change', function () {
+            S.categoryId = $('#psmCategoryFilter').val();
+            S.brandId    = $('#psmBrandFilter').val();
+            _fetch(true);
+        });
+
         $('#psmBtnReset').on('click', function () {
             S.query = ''; S.categoryId = ''; S.brandId = '';
             $('#psmSearchInput').val('');

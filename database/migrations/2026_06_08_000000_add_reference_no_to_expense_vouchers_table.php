@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('expense_vouchers', function (Blueprint $table) {
+        if (Schema::hasTable('expense_vouchers')) {
+    Schema::table('expense_vouchers', function (Blueprint $table) {
             if (!Schema::hasColumn('expense_vouchers', 'reference_no')) {
-                $table->text('reference_no')->nullable()->after('remarks');
+
+                if (!Schema::hasColumn('expense_vouchers', 'reference_no')) {
+
+                    $table->text('reference_no')->nullable()->after('remarks');
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -23,10 +30,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('expense_vouchers', function (Blueprint $table) {
+        if (Schema::hasTable('expense_vouchers')) {
+    Schema::table('expense_vouchers', function (Blueprint $table) {
             if (Schema::hasColumn('expense_vouchers', 'reference_no')) {
                 $table->dropColumn('reference_no');
             }
-        });
+            });
+}
     }
 };

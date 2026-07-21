@@ -377,6 +377,13 @@
                                                         class="text-muted fw-600">{{ $return->purchase->invoice_no }}</small>
                                                 </div>
                                             @endif
+                                            @if($return->createdBy)
+                                                <div class="mt-1">
+                                                    <span class="badge bg-light text-muted fw-bold" style="font-size: 0.65rem; border: 1px dashed var(--slate-100); padding: 2px 6px; border-radius: 4px; width: fit-content;">
+                                                        <i class="fas fa-user me-1"></i>{{ $return->createdBy->name }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                     </td>
                                     <td>

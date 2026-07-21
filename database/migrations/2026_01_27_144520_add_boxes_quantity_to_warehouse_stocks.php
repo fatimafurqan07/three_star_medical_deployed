@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
+        if (Schema::hasTable('warehouse_stocks')) {
+    Schema::table('warehouse_stocks', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 };

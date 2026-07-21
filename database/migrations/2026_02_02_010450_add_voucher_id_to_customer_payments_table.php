@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customer_payments', function (Blueprint $table) {
+        if (Schema::hasTable('customer_payments')) {
+    Schema::table('customer_payments', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customer_payments', function (Blueprint $table) {
+        if (Schema::hasTable('customer_payments')) {
+    Schema::table('customer_payments', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 };

@@ -11,14 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             if (!Schema::hasColumn('hr_employees', 'face_encoding')) {
-                $table->text('face_encoding')->nullable()->after('status');
+
+                if (!Schema::hasColumn('hr_employees', 'face_encoding')) {
+
+                    $table->text('face_encoding')->nullable()->after('status');
+
+                }
             }
             if (!Schema::hasColumn('hr_employees', 'face_photo')) {
-                $table->string('face_photo')->nullable()->after('face_encoding');
+
+                if (!Schema::hasColumn('hr_employees', 'face_photo')) {
+
+                    $table->string('face_photo')->nullable()->after('face_encoding');
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -26,8 +38,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             $table->dropColumn(['face_encoding', 'face_photo']);
-        });
+            });
+}
     }
 };

@@ -9,35 +9,42 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
-            $table->unsignedBigInteger('uom_id')->nullable()->after('product_id')
-                  ->comment('NULL = base/unclassified unit; FK to product_uoms');
-            $table->foreign('uom_id')->references('id')->on('product_uoms')->onDelete('set null');
-        });
+        if (Schema::hasTable('warehouse_stocks')) {
+            Schema::table('warehouse_stocks', function (Blueprint $table) {
+                if (!Schema::hasColumn('warehouse_stocks', 'uom_id')) {
+                    $table->unsignedBigInteger('uom_id')->nullable()->after('product_id')
+                        ->comment('NULL = base/unclassified unit; FK to product_uoms');
+                    $table->foreign('uom_id')->references('id')->on('product_uoms')->onDelete('set null');
+                }
+            });
 
-        // Drop old unique key if any (warehouse_id + product_id only)
-        // and add new unique key (warehouse_id + product_id + uom_id)
-        // We use a try/catch style via raw SQL as Laravel can't drop unknown index names portably
-        try {
-            DB::statement('ALTER TABLE warehouse_stocks DROP INDEX warehouse_stocks_warehouse_id_product_id_unique');
-        } catch (\Exception $e) {
-            // Index may not exist under that name — that's fine
+            // Drop old unique key if any (warehouse_id + product_id only)
+            try {
+                DB::statement('ALTER TABLE warehouse_stocks DROP INDEX warehouse_stocks_warehouse_id_product_id_unique');
+            } catch (\Exception $e) {
+                // Index may not exist under that name — that's fine
+            }
+
+            // Add the new composite unique index
+            try {
+                DB::statement('ALTER TABLE warehouse_stocks ADD UNIQUE KEY uq_wh_product_uom (warehouse_id, product_id, uom_id)');
+            } catch (\Exception $e) {
+                // may already exist
+            }
         }
-
-        // Add the new composite unique index (NULL-safe via UNIQUE in MySQL treats each NULL as distinct,
-        // so two rows with same warehouse/product but uom_id=NULL are also unique — this is correct)
-        DB::statement('ALTER TABLE warehouse_stocks ADD UNIQUE KEY uq_wh_product_uom (warehouse_id, product_id, uom_id)');
     }
 
     public function down(): void
     {
-        Schema::table('warehouse_stocks', function (Blueprint $table) {
-            $table->dropForeign(['uom_id']);
-            $table->dropColumn('uom_id');
-        });
+        if (Schema::hasTable('warehouse_stocks')) {
+            Schema::table('warehouse_stocks', function (Blueprint $table) {
+                $table->dropForeign(['uom_id']);
+                $table->dropColumn('uom_id');
+            });
 
-        try {
-            DB::statement('ALTER TABLE warehouse_stocks DROP INDEX uq_wh_product_uom');
-        } catch (\Exception $e) {}
+            try {
+                DB::statement('ALTER TABLE warehouse_stocks DROP INDEX uq_wh_product_uom');
+            } catch (\Exception $e) {}
+        }
     }
 };

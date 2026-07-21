@@ -11,14 +11,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vendor_ledgers', function (Blueprint $table) {
-            $table->decimal('debit', 15, 2)->default(0)->after('vendor_id');
-            $table->decimal('credit', 15, 2)->default(0)->after('debit');
-            $table->string('description')->nullable()->after('credit');
+        if (Schema::hasTable('vendor_ledgers')) {
+    Schema::table('vendor_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendor_ledgers', 'debit')) {
+
+                $table->decimal('debit', 15, 2)->default(0)->after('vendor_id');
+
+            }
+
+            if (!Schema::hasColumn('vendor_ledgers', 'credit')) {
+
+                $table->decimal('credit', 15, 2)->default(0)->after('debit');
+
+            }
+
+            if (!Schema::hasColumn('vendor_ledgers', 'description')) {
+
+                $table->string('description')->nullable()->after('credit');
+
+            }
             
             // Link to source transaction (Purchase, VoucherMaster, etc.)
             $table->nullableMorphs('source'); 
-        });
+            });
+}
     }
 
     /**
@@ -26,9 +43,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vendor_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('vendor_ledgers')) {
+    Schema::table('vendor_ledgers', function (Blueprint $table) {
             $table->dropColumn(['debit', 'credit', 'description']);
             $table->dropMorphs('source');
-        });
+            });
+}
     }
 };

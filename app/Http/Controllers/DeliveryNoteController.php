@@ -28,6 +28,7 @@ class DeliveryNoteController extends Controller
             'sale',
             'customer',
             'items.product',
+            'createdBy',
         ])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
@@ -112,6 +113,7 @@ class DeliveryNoteController extends Controller
                     'enable_hs_code'=> $request->has('enable_hs_code'),
                     'status'        => 'completed',
                     'subtotal'      => 0, 'net_amount' => 0, 'paid_amount' => 0,
+                    'created_by'    => auth()->id() ?? 1,
                 ]);
 
                 if (!$isSample) $sale->update(['sale_status' => 'in_delivery']);

@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_payrolls', function (Blueprint $table) {
-            $table->unsignedBigInteger('sale_id')->nullable()->after('employee_id');
-        });
+        if (Schema::hasTable('hr_payrolls')) {
+    Schema::table('hr_payrolls', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_payrolls', 'sale_id')) {
+
+                $table->unsignedBigInteger('sale_id')->nullable()->after('employee_id');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_payrolls', function (Blueprint $table) {
+        if (Schema::hasTable('hr_payrolls')) {
+    Schema::table('hr_payrolls', function (Blueprint $table) {
             $table->dropColumn('sale_id');
-        });
+            });
+}
     }
 };

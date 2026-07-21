@@ -12,9 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_designations', function (Blueprint $table) {
-            $table->boolean('requires_location')->default(false)->after('description');
-        });
+        if (Schema::hasTable('hr_designations')) {
+    Schema::table('hr_designations', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_designations', 'requires_location')) {
+
+                $table->boolean('requires_location')->default(false)->after('description');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_designations', function (Blueprint $table) {
+        if (Schema::hasTable('hr_designations')) {
+    Schema::table('hr_designations', function (Blueprint $table) {
             $table->dropColumn('requires_location');
-        });
+            });
+}
     }
 };

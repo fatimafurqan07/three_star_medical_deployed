@@ -440,13 +440,20 @@
         <div class="filter-card">
             <div class="filter-inputs-container">
                 <div class="filter-row">
-                    <div class="filter-group" style="flex: 1; min-width: 120px; max-width: 180px;">
-                        <label>Warehouse</label>
+                    <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 220px;">
+                        <label>Location (Shop / Warehouse)</label>
                         <select id="warehouseId" class="select2">
-                            <option value="all">All Warehouses</option>
-                            @foreach ($warehouses as $wh)
-                                <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
-                            @endforeach
+                            <option value="all">All Locations</option>
+                            <optgroup label="🏪 Shops (Retail)">
+                                @foreach ($shops as $sh)
+                                    <option value="{{ $sh->id }}">{{ $sh->warehouse_name }}</option>
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="🏭 Warehouses (Storage)">
+                                @foreach ($warehouses as $wh)
+                                    <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
+                                @endforeach
+                            </optgroup>
                         </select>
                     </div>
                     <div class="filter-group" style="flex: 1; min-width: 110px; max-width: 130px;">

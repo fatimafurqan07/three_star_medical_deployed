@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
-            $table->text('description')->nullable()->after('opening_balance');
-        });
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customer_ledgers', 'description')) {
+
+                $table->text('description')->nullable()->after('opening_balance');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
             $table->dropColumn('description');
-        });
+            });
+}
     }
 };

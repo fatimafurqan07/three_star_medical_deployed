@@ -8,10 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('hr_holidays', function (Blueprint $table) {
+        if (Schema::hasTable('hr_holidays')) {
+    Schema::table('hr_holidays', function (Blueprint $table) {
             $table->dropUnique(['date']);
-            $table->date('end_date')->nullable()->after('date');
-        });
+
+            if (!Schema::hasColumn('hr_holidays', 'end_date')) {
+
+                $table->date('end_date')->nullable()->after('date');
+
+            }
+            });
+}
 
         Schema::create('hr_employee_holiday', function (Blueprint $table) {
             $table->id();
@@ -25,10 +32,12 @@ return new class extends Migration
     {
         Schema::dropIfExists('hr_employee_holiday');
 
-        Schema::table('hr_holidays', function (Blueprint $table) {
+        if (Schema::hasTable('hr_holidays')) {
+    Schema::table('hr_holidays', function (Blueprint $table) {
             $table->dropColumn('end_date');
             // Adding back the unique, though it might fail if there are duplicates from the new changes
             $table->unique('date');
-        });
+            });
+}
     }
 };

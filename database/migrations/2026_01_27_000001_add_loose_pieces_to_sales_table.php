@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->text('per_loose_pieces')->nullable()->after('per_total_pieces');
-        });
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sales', 'per_loose_pieces')) {
+
+                $table->text('per_loose_pieces')->nullable()->after('per_total_pieces');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $table->dropColumn(['per_loose_pieces']);
-        });
+            });
+}
     }
 };

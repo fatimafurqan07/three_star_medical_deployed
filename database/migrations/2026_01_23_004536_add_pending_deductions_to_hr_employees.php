@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
-            $table->decimal('pending_deductions', 10, 2)->default(0)->after('punch_gap_minutes');
-        });
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_employees', 'pending_deductions')) {
+
+                $table->decimal('pending_deductions', 10, 2)->default(0)->after('punch_gap_minutes');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             $table->dropColumn('pending_deductions');
-        });
+            });
+}
     }
 };

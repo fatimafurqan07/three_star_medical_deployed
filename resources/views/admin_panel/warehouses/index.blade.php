@@ -1,39 +1,57 @@
 @extends('admin_panel.layout.app')
 @section('content')
+    <style>
+        .type-badge-shop {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #fff;
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+        }
+        .type-badge-warehouse {
+            background: linear-gradient(135deg, #0891b2, #0369a1);
+            color: #fff;
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+        }
+    </style>
     <div class="main-content">
         <div class="main-content-inner">
             <div class="container-fluid">
 
                 <div class="page-header row">
                     <div class="page-title col-lg-6">
-                        <h4>Warehouse List</h4>
-                        <h6>Manage Warehouses</h6>
+                        <h4>Locations — Shops &amp; Warehouses</h4>
+                        <h6>Manage all stock locations: Shops (Retail) and Warehouses (Storage)</h6>
                     </div>
-                    <div class="page-btn d-flex justify-content-end col-lg-6">
+                    <div class="page-btn d-flex justify-content-end col-lg-6 gap-2">
                         @can('warehouse.create')
                             <button class="btn btn-outline-primary mb-2" data-toggle="modal" data-target="#warehouseModal"
-                                onclick="clearWarehouse()">Add Warehouse</button>
+                                onclick="clearWarehouse()">
+                                <i class="las la-plus-circle me-1"></i> Add Location
+                            </button>
                         @endcan
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="card-body">
-                        {{-- @if (session()->has('success'))
-                            <div class="alert alert-success"><strong>Success!</strong> {{ session('success') }}</div>
-                        @endif --}}
-
                         <table class="table datanew">
                             <thead>
                                 <tr>
                                     <th>#</th>
+                                    <th>Type</th>
                                     <th>Created By</th>
                                     @if (auth()->user()->hasRole('Super Admin'))
-                                        <th>Branch ID</th>
-                                        <th>Branch Name</th>
+                                        <th>Branch</th>
                                     @endif
                                     <th>Name</th>
-                                    <th>Location</th>
+                                    <th>Location / Address</th>
                                     <th>Remarks</th>
                                     <th>Action</th>
                                 </tr>
@@ -42,31 +60,47 @@
                                 @foreach ($warehouses as $key => $w)
                                     <tr>
                                         <td>{{ $key + 1 }}</td>
+                                        <td>
+                                            @if($w->type === 'shop')
+                                                <span class="type-badge-shop">🏪 Shop</span>
+                                            @else
+                                                <span class="type-badge-warehouse">🏭 Warehouse</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $w->user->name ?? 'N/A' }}</td>
                                         @if (auth()->user()->hasRole('Super Admin'))
-                                            <td>{{ $w->branch_id ?? 'N/A' }}</td>
-                                            <td>{{ $w->branch->name ?? 'N/A' }}</td>
+                                            <td>{{ $w->branch->name ?? ('Branch #' . $w->branch_id) }}</td>
                                         @endif
                                         <td>{{ $w->warehouse_name }}</td>
-                                        <td>{{ $w->location }}</td>
-                                        <td>{{ $w->remarks }}</td>
+                                        <td>{{ $w->location ?? '—' }}</td>
+                                        <td>{{ $w->remarks ?? '—' }}</td>
                                         <td>
                                             @can('warehouse.edit')
-                                                <button class="btn btn-primary btn-sm edit-warehouse-btn"
-                                                    data-id="{{ $w->id }}" data-name="{{ $w->warehouse_name }}"
-                                                    data-location="{{ $w->location }}" data-remarks="{{ $w->remarks }}"
-                                                    data-branch="{{ $w->branch_id }}" data-toggle="modal"
-                                                    data-target="#warehouseModal">
-                                                    Edit
-                                                </button>
+                                                @if($w->type !== 'shop')
+                                                    <button class="btn btn-primary btn-sm edit-warehouse-btn"
+                                                        data-id="{{ $w->id }}"
+                                                        data-name="{{ $w->warehouse_name }}"
+                                                        data-location="{{ $w->location }}"
+                                                        data-remarks="{{ $w->remarks }}"
+                                                        data-branch="{{ $w->branch_id }}"
+                                                        data-type="{{ $w->type }}"
+                                                        data-toggle="modal"
+                                                        data-target="#warehouseModal">
+                                                        Edit
+                                                    </button>
+                                                @else
+                                                    <span class="text-muted small">Auto-managed</span>
+                                                @endif
                                             @endcan
                                             @can('warehouse.delete')
-                                                <button class="btn btn-danger btn-sm delete-btn"
-                                                    data-url="{{ url('warehouse/delete/' . $w->id) }}"
-                                                    data-msg="Are you sure you want to delete this warehouse?" data-method="get"
-                                                    onclick="logoutAndDeleteFunction(this)">
-                                                    Delete
-                                                </button>
+                                                @if($w->type !== 'shop')
+                                                    <button class="btn btn-danger btn-sm delete-btn"
+                                                        data-url="{{ url('warehouse/delete/' . $w->id) }}"
+                                                        data-msg="Are you sure you want to delete this warehouse?" data-method="get"
+                                                        onclick="logoutAndDeleteFunction(this)">
+                                                        Delete
+                                                    </button>
+                                                @endif
                                             @endcan
                                         </td>
                                     </tr>
@@ -88,13 +122,24 @@
                 <input type="hidden" name="id" id="warehouse_id">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Add/Edit Warehouse</h5>
+                        <h5 class="modal-title">Add / Edit Warehouse</h5>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-2"><input class="form-control" name="warehouse_name" id="warehouse_name"
-                                placeholder="Name" required></div>
-                        <div class="mb-2 d-none"><input class="form-control" name="creater_id" id=""
-                                value="{{ Auth()->user()->id }}" placeholder="Name" required></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-600">Location Type</label>
+                            <select class="form-control" name="type" id="wh_type" required>
+                                <option value="warehouse">🏭 Warehouse (Storage)</option>
+                                <option value="shop">🏪 Shop (Retail)</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input class="form-control" name="warehouse_name" id="warehouse_name"
+                                placeholder="Name" required>
+                        </div>
+                        <div class="mb-2 d-none">
+                            <input class="form-control" name="creater_id" id=""
+                                value="{{ Auth()->user()->id }}" placeholder="Name" required>
+                        </div>
                         @if (auth()->user()->hasRole('Super Admin'))
                             <div class="mb-2">
                                 <select class="form-control" name="branch_id" id="branch_id" required>
@@ -105,8 +150,10 @@
                                 </select>
                             </div>
                         @endif
-                        <div class="mb-2"><input class="form-control" name="location" id="location"
-                                placeholder="Location"></div>
+                        <div class="mb-2">
+                            <input class="form-control" name="location" id="location"
+                                placeholder="Physical location / address">
+                        </div>
                         <div class="mb-2">
                             <textarea class="form-control" name="remarks" id="remarks" placeholder="Remarks"></textarea>
                         </div>
@@ -120,56 +167,4 @@
             </form>
         </div>
     </div>
-@endsection
-
-{{-- @push('scripts') --}}
-@section('js')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    @if (session('success'))
-        <script>
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: "{{ session('success') }}",
-                timer: 3000,
-                showConfirmButton: false
-            });
-        </script>
-    @endif
-    <script>
-        function clearWarehouse() {
-            $('#warehouse_id').val('');
-            $('#warehouse_name').val('');
-            $('#location').val('');
-            $('#remarks').val('');
-            if ($('#branch_id').length) {
-                $('#branch_id').val('');
-            }
-        }
-
-        // function editWarehouse(id,name,location,remarks){
-        //     alert(id);
-        //     $('#warehouse_id').val(id);
-        //     $('#warehouse_name').val(name);
-        //     $('#location').val(location);
-        //     $('#remarks').val(remarks);
-        //  }
-
-        // Handle Edit button click
-        $(document).on('click', '.edit-warehouse-btn', function() {
-            // alert("Edit button clicked ✅"+ $(this).data('id'));
-
-            $('#warehouse_id').val($(this).data('id'));
-            $('#warehouse_name').val($(this).data('name'));
-            $('#location').val($(this).data('location'));
-            $('#remarks').val($(this).data('remarks'));
-            if ($('#branch_id').length) {
-                $('#branch_id').val($(this).data('branch'));
-            }
-        });
-
-
-        $('.datanew').DataTable();
-    </script>
-    {{-- @endpush --}}
 @endsection

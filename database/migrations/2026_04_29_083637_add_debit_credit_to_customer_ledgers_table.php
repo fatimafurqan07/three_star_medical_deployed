@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
-            $table->decimal('debit', 15, 2)->default(0)->after('customer_id');
-            $table->decimal('credit', 15, 2)->default(0)->after('debit');
-        });
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customer_ledgers', 'debit')) {
+
+                $table->decimal('debit', 15, 2)->default(0)->after('customer_id');
+
+            }
+
+            if (!Schema::hasColumn('customer_ledgers', 'credit')) {
+
+                $table->decimal('credit', 15, 2)->default(0)->after('debit');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
             $table->dropColumn(['debit', 'credit']);
-        });
+            });
+}
     }
 };

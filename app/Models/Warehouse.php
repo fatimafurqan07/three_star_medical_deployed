@@ -22,4 +22,31 @@ public function products() {
     {
         return $this->belongsTo(Branch::class, 'branch_id');
     }
+
+    public static function ensureShopWarehousesExists()
+    {
+        $branches = \App\Models\Branch::all();
+        if ($branches->isEmpty()) {
+            self::firstOrCreate(
+                ['type' => 'shop'],
+                [
+                    'warehouse_name' => 'Main Shop',
+                    'branch_id' => 1,
+                    'location' => 'Main Address',
+                    'creater_id' => auth()->id() ?? 1,
+                ]
+            );
+        } else {
+            foreach ($branches as $branch) {
+                self::firstOrCreate(
+                    ['type' => 'shop', 'branch_id' => $branch->id],
+                    [
+                        'warehouse_name' => $branch->name . ' – Shop',
+                        'location' => $branch->address,
+                        'creater_id' => auth()->id() ?? 1,
+                    ]
+                );
+            }
+        }
+    }
 }

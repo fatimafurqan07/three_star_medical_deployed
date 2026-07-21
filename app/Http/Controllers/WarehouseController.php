@@ -100,7 +100,7 @@ class WarehouseController extends Controller
             ]);
         }
 
-        $allowedFields = ['warehouse_name', 'creater_id', 'branch_id', 'location', 'remarks'];
+        $allowedFields = ['warehouse_name', 'creater_id', 'branch_id', 'location', 'remarks', 'type'];
         $data = $request->only($allowedFields);
 
         if (! $user->hasRole('Super Admin')) {

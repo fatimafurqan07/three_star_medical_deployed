@@ -18,8 +18,10 @@ class DatabaseSeeder extends Seeder
         // Run other seeders
         $this->call([
             CategorySeeder::class,
-            ProductSeeder::class,
-            WarehouseSeeder::class,
+            BrandSeeder::class,
+            WarehouseSeeder::class,          // Run before ProductSeeder so default warehouse exists
+            // ProductSeeder::class,         // Disabled: products are uploaded directly/manually now
+            // WarehouseStockSeeder::class,  // Disabled: stock records are created during product import
             // PermissionRoleUserSeeder::class, // REMOVED: Using new AllModulesPermissionsSeeder
             ModulesTableSeeder::class, 
             AllModulesPermissionsSeeder::class, // NEW: All module permissions (module.view, module.create, etc.)

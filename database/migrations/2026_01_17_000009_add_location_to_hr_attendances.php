@@ -11,17 +11,49 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_attendances', function (Blueprint $table) {
+        if (Schema::hasTable('hr_attendances')) {
+    Schema::table('hr_attendances', function (Blueprint $table) {
             // Check-in location
-            $table->decimal('check_in_latitude', 10, 8)->nullable()->after('check_in_photo');
-            $table->decimal('check_in_longitude', 11, 8)->nullable()->after('check_in_latitude');
-            $table->string('check_in_location')->nullable()->after('check_in_longitude');
+
+            if (!Schema::hasColumn('hr_attendances', 'check_in_latitude')) {
+
+                $table->decimal('check_in_latitude', 10, 8)->nullable()->after('check_in_photo');
+
+            }
+
+            if (!Schema::hasColumn('hr_attendances', 'check_in_longitude')) {
+
+                $table->decimal('check_in_longitude', 11, 8)->nullable()->after('check_in_latitude');
+
+            }
+
+            if (!Schema::hasColumn('hr_attendances', 'check_in_location')) {
+
+                $table->string('check_in_location')->nullable()->after('check_in_longitude');
+
+            }
             
             // Check-out location
-            $table->decimal('check_out_latitude', 10, 8)->nullable()->after('check_out_photo');
-            $table->decimal('check_out_longitude', 11, 8)->nullable()->after('check_out_latitude');
-            $table->string('check_out_location')->nullable()->after('check_out_longitude');
-        });
+
+            if (!Schema::hasColumn('hr_attendances', 'check_out_latitude')) {
+
+                $table->decimal('check_out_latitude', 10, 8)->nullable()->after('check_out_photo');
+
+            }
+
+            if (!Schema::hasColumn('hr_attendances', 'check_out_longitude')) {
+
+                $table->decimal('check_out_longitude', 11, 8)->nullable()->after('check_out_latitude');
+
+            }
+
+            if (!Schema::hasColumn('hr_attendances', 'check_out_location')) {
+
+                $table->string('check_out_location')->nullable()->after('check_out_longitude');
+
+            }
+            });
+}
     }
 
     /**
@@ -29,7 +61,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_attendances', function (Blueprint $table) {
+        if (Schema::hasTable('hr_attendances')) {
+    Schema::table('hr_attendances', function (Blueprint $table) {
             $table->dropColumn([
                 'check_in_latitude',
                 'check_in_longitude', 
@@ -38,6 +71,7 @@ return new class extends Migration
                 'check_out_longitude',
                 'check_out_location',
             ]);
-        });
+            });
+}
     }
 };

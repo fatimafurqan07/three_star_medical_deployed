@@ -12,9 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasColumn('stock_transfers', 'branch_id')) {
-            Schema::table('stock_transfers', function (Blueprint $table) {
-                $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('id');
-            });
+            if (Schema::hasTable('stock_transfers')) {
+    Schema::table('stock_transfers', function (Blueprint $table) {
+
+                if (!Schema::hasColumn('stock_transfers', 'branch_id')) {
+
+                    $table->unsignedBigInteger('branch_id')->nullable()->default(1)->after('id');
+
+                }
+                });
+}
         }
     }
 
@@ -24,9 +31,11 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasColumn('stock_transfers', 'branch_id')) {
-            Schema::table('stock_transfers', function (Blueprint $table) {
+            if (Schema::hasTable('stock_transfers')) {
+    Schema::table('stock_transfers', function (Blueprint $table) {
                 $table->dropColumn('branch_id');
-            });
+                });
+}
         }
     }
 };

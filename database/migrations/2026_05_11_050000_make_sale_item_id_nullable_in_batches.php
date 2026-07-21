@@ -8,15 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('sale_item_batches', function (Blueprint $table) {
-            $table->unsignedBigInteger('sale_item_id')->nullable()->change();
-        });
+        if (Schema::hasTable('sale_item_batches')) {
+    Schema::table('sale_item_batches', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_item_batches', 'sale_item_id')) {
+
+                $table->unsignedBigInteger('sale_item_id')->nullable()->change();
+
+            }
+            });
+}
     }
 
     public function down(): void
     {
-        Schema::table('sale_item_batches', function (Blueprint $table) {
-            $table->unsignedBigInteger('sale_item_id')->nullable(false)->change();
-        });
+        if (Schema::hasTable('sale_item_batches')) {
+    Schema::table('sale_item_batches', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_item_batches', 'sale_item_id')) {
+
+                $table->unsignedBigInteger('sale_item_id')->nullable(false)->change();
+
+            }
+            });
+}
     }
 };

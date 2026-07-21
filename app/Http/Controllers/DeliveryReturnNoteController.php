@@ -23,7 +23,7 @@ class DeliveryReturnNoteController extends Controller
     public function index()
     {
         $branchId = $this->getBranchId();
-        $returns = DeliveryReturnNote::with(['customer', 'items.product', 'deliveryNote'])
+        $returns = DeliveryReturnNote::with(['customer', 'items.product', 'deliveryNote', 'createdBy'])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
             ->get();
@@ -124,6 +124,7 @@ class DeliveryReturnNoteController extends Controller
                 'return_date' => $request->return_date,
                 'remarks' => $request->remarks,
                 'sale_id' => $request->sale_id, // If it comes from form
+                'created_by' => auth()->id() ?? 1,
             ]);
 
             $totalBill = 0;

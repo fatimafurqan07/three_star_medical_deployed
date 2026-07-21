@@ -737,9 +737,27 @@
                                 </select>
                             </div>
                             <div class="filter-group" style="flex: 1; min-width: 150px;">
-                                <label>Warehouse</label>
+                                <label>Location (Shop / Warehouse)</label>
                                 <select id="filterWarehouse" class="form-control select2-global">
-                                    <option value="all">All Warehouses</option>
+                                    <option value="all">All Locations</option>
+                                    @php
+                                        $shopLocations = $allLocations->where('type','shop');
+                                        $whLocations   = $allLocations->where('type','warehouse');
+                                    @endphp
+                                    @if($shopLocations->isNotEmpty())
+                                    <optgroup label="🏪 Shops (Retail)">
+                                        @foreach($shopLocations as $loc)
+                                            <option value="{{ $loc->id }}" data-type="shop">🏪 {{ $loc->warehouse_name }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                    @endif
+                                    @if($whLocations->isNotEmpty())
+                                    <optgroup label="🏭 Warehouses (Storage)">
+                                        @foreach($whLocations as $loc)
+                                            <option value="{{ $loc->id }}" data-type="warehouse">🏭 {{ $loc->warehouse_name }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                    @endif
                                 </select>
                             </div>
                             @if($isSuperAdmin)
@@ -1137,9 +1155,8 @@
                 var pills = whs.map(function(w) {
                     return '<div class="wh-pill">' +
                         '<i class="fas fa-warehouse" style="color:#64748b;font-size:.7rem;"></i>' +
-                        '<span class="wh-name">' + w.warehouse_name + '</span>:' +
+                        '<span class="wh-name">' + w.warehouse_name + '</span>: ' +
                         '<span class="wh-qty">' + w.display + '</span>' +
-                        (IS_SUPER_ADMIN && w.branch_name ? '<br><small class="text-muted">Branch: ' + w.branch_name + '</small>' : '') +
                         '</div>';
                 }).join('');
                 return '<div class="wh-pills">' + pills + '</div>';
@@ -1287,14 +1304,38 @@
             }
 
             // ── Populate warehouse dropdown ──────────────────────────────────────
+            // Pre-populated from Blade (allLocations) on page load.
+            // AJAX response may return updated locations – only apply if dropdown is currently empty (no optgroups).
             function populateWarehouseFilter(warehouses) {
-                if (_warehousesLoaded) return;
-                _warehousesLoaded = true;
                 var $sel = $('#filterWarehouse');
+                var hasGroups = $sel.find('optgroup').length > 0;
+                if (hasGroups) {
+                    // Already pre-populated from Blade – just ensure select2 is refreshed
+                    $sel.trigger('change.select2');
+                    return;
+                }
+                // Fallback: populate from AJAX response (first search before page has options)
+                _warehousesLoaded = true;
                 $sel.find('option:not(:first)').remove();
-                warehouses.forEach(function(w) {
-                    $sel.append('<option value="' + w.id + '">' + w.warehouse_name + '</option>');
-                });
+
+                var shops = warehouses.filter(function(w){ return w.type === 'shop'; });
+                var whs   = warehouses.filter(function(w){ return w.type !== 'shop'; });
+
+                if (shops.length > 0) {
+                    var $gShop = $('<optgroup label="🏪 Shops (Retail)"></optgroup>');
+                    shops.forEach(function(w) {
+                        $gShop.append('<option value="' + w.id + '" data-type="shop">🏪 ' + w.warehouse_name + '</option>');
+                    });
+                    $sel.append($gShop);
+                }
+                if (whs.length > 0) {
+                    var $gWh = $('<optgroup label="🏭 Warehouses (Storage)"></optgroup>');
+                    whs.forEach(function(w) {
+                        $gWh.append('<option value="' + w.id + '" data-type="warehouse">🏭 ' + w.warehouse_name + '</option>');
+                    });
+                    $sel.append($gWh);
+                }
+                $sel.trigger('change.select2');
             }
 
             // ── Fetch data ───────────────────────────────────────────────────────

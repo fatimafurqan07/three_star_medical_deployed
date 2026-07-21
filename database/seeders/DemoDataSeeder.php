@@ -98,13 +98,13 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
-        $wh = DB::table('warehouses')->where('warehouse_name', 'Main Store')->first();
+        $wh = DB::table('warehouses')->orderBy('id')->first();
         if ($wh) {
             $this->warehouseId = $wh->id;
         } else {
             $this->warehouseId = DB::table('warehouses')->insertGetId([
                 'branch_id' => $this->branchId,
-                'warehouse_name' => 'Main Store',
+                'warehouse_name' => 'warehouse1',
                 'creater_id' => 1,
                 'location' => 'Karachi',
                 'remarks' => 'Primary demo stock store',

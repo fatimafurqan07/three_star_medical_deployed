@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             // Drop foreign key if exists
             try {
                 $table->dropForeign(['employee_id']);
@@ -25,7 +26,12 @@ return new class extends Migration
             }
 
             // Make employee_id nullable
-            $table->unsignedBigInteger('employee_id')->nullable()->change();
+
+            if (!Schema::hasColumn('hr_salary_structures', 'employee_id')) {
+
+                $table->unsignedBigInteger('employee_id')->nullable()->change();
+
+            }
 
             // Add normal index
             try {
@@ -41,9 +47,15 @@ return new class extends Migration
 
             // Add name column if not exists
             if (! Schema::hasColumn('hr_salary_structures', 'name')) {
-                $table->string('name')->nullable()->after('id');
+
+                if (!Schema::hasColumn('hr_salary_structures', 'name')) {
+
+                    $table->string('name')->nullable()->after('id');
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -51,12 +63,19 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             // This down migration is risky because if we have nulls, we can't revert to not null
             // We will attempt to revert assuming data is clean
             $table->dropColumn('name');
-            $table->unsignedBigInteger('employee_id')->nullable(false)->change();
+
+            if (!Schema::hasColumn('hr_salary_structures', 'employee_id')) {
+
+                $table->unsignedBigInteger('employee_id')->nullable(false)->change();
+
+            }
             $table->unique('employee_id');
-        });
+            });
+}
     }
 };

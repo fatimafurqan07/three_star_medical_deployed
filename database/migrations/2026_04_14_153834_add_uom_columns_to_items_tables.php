@@ -11,15 +11,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchase_items', function (Blueprint $table) {
-            $table->string('uom_name')->nullable()->after('product_id');
-            $table->decimal('uom_factor', 18, 4)->default(1)->after('uom_name');
-        });
+        if (Schema::hasTable('purchase_items')) {
+    Schema::table('purchase_items', function (Blueprint $table) {
 
-        Schema::table('sale_items', function (Blueprint $table) {
-            $table->string('uom_name')->nullable()->after('product_name');
-            $table->decimal('uom_factor', 18, 4)->default(1)->after('uom_name');
-        });
+            if (!Schema::hasColumn('purchase_items', 'uom_name')) {
+
+                $table->string('uom_name')->nullable()->after('product_id');
+
+            }
+
+            if (!Schema::hasColumn('purchase_items', 'uom_factor')) {
+
+                $table->decimal('uom_factor', 18, 4)->default(1)->after('uom_name');
+
+            }
+            });
+}
+
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_items', 'uom_name')) {
+
+                $table->string('uom_name')->nullable()->after('product_name');
+
+            }
+
+            if (!Schema::hasColumn('sale_items', 'uom_factor')) {
+
+                $table->decimal('uom_factor', 18, 4)->default(1)->after('uom_name');
+
+            }
+            });
+}
     }
 
     /**
@@ -27,12 +51,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchase_items', function (Blueprint $table) {
+        if (Schema::hasTable('purchase_items')) {
+    Schema::table('purchase_items', function (Blueprint $table) {
             $table->dropColumn(['uom_name', 'uom_factor']);
-        });
+            });
+}
 
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             $table->dropColumn(['uom_name', 'uom_factor']);
-        });
+            });
+}
     }
 };

@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->json('payment_details')->nullable()->after('change');
-        });
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sales', 'payment_details')) {
+
+                $table->json('payment_details')->nullable()->after('change');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $table->dropColumn('payment_details');
-        });
+            });
+}
     }
 };

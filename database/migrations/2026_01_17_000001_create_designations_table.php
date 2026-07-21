@@ -23,10 +23,12 @@ return new class extends Migration
         // We need to drop the old string 'designation' column and add 'designation_id' foreign key.
         // Since we just created the table, we can assume it's safe to drop the column or we can keep it as backup.
         // Let's drop it to be clean.
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             $table->dropColumn('designation');
             $table->foreignId('designation_id')->after('department_id')->constrained('hr_designations')->cascadeOnDelete();
-        });
+            });
+}
     }
 
     /**
@@ -34,11 +36,18 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             $table->dropForeign(['designation_id']);
             $table->dropColumn('designation_id');
-            $table->string('designation')->nullable(); // Restore column
-        });
+
+            if (!Schema::hasColumn('hr_employees', 'designation')) {
+
+                $table->string('designation')->nullable();
+
+            } // Restore column
+            });
+}
 
         Schema::dropIfExists('hr_designations');
     }

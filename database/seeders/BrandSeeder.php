@@ -13,12 +13,51 @@ class BrandSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-         $brands = ['Pak Fan', 'Super Asia', 'Hier', 'Downlance ', 'Gree'];
-          foreach ($brands as $brand) {
-            Brand::firstOrCreate(['name' => $brand ]);
+        // Safely truncate brands table
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        Brand::truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
+        $brands = [
+            'ABBOTT',
+            'ATLAS',
+            'BIO-VAC',
+            'BIOANALYSE',
+            'BIOPRO',
+            'BIORESEARCH',
+            'BIOSCIEN',
+            'CHINA',
+            'CRESCENT',
+            'DFI',
+            'DIACHEM',
+            'DIAGAST',
+            'DIAMOND',
+            'GERMANY',
+            'GMBH',
+            'HEALGEN',
+            'HELENA',
+            'IMMUMED',
+            'JMS',
+            'LAB KITS',
+            'MARIENFIELD',
+            'MAXLIFE',
+            'MISSION',
+            'OTHER',
+            'OXOID',
+            'RIGHTSIGN',
+            'ROCHE',
+            'RSB',
+            'SBIO',
+            'SYSMEX',
+            'WEGO',
+            'XINLE',
+            'YBK',
+        ];
+
+        foreach ($brands as $brandName) {
+            Brand::create(['name' => $brandName]);
         }
     }
-    }
+}
 
 

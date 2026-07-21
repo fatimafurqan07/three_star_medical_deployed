@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vendors', function (Blueprint $table) {
+        if (Schema::hasTable('vendors')) {
+    Schema::table('vendors', function (Blueprint $table) {
             if (!Schema::hasColumn('vendors', 'opening_balance')) {
-                $table->decimal('opening_balance', 12, 2)->default(0)->after('name');
+
+                if (!Schema::hasColumn('vendors', 'opening_balance')) {
+
+                    $table->decimal('opening_balance', 12, 2)->default(0)->after('name');
+
+                }
             }
-        });
+            });
+}
     }
 
     /**
@@ -23,8 +30,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vendors', function (Blueprint $table) {
+        if (Schema::hasTable('vendors')) {
+    Schema::table('vendors', function (Blueprint $table) {
             $table->dropColumn('opening_balance');
-        });
+            });
+}
     }
 };

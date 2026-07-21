@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchase_return_items', function (Blueprint $table) {
-            $table->string('item_discount_type')->nullable()->default('amount')->after('item_discount');
-        });
+        if (Schema::hasTable('purchase_return_items')) {
+    Schema::table('purchase_return_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('purchase_return_items', 'item_discount_type')) {
+
+                $table->string('item_discount_type')->nullable()->default('amount')->after('item_discount');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchase_return_items', function (Blueprint $table) {
+        if (Schema::hasTable('purchase_return_items')) {
+    Schema::table('purchase_return_items', function (Blueprint $table) {
             $table->dropColumn('item_discount_type');
-        });
+            });
+}
     }
 };

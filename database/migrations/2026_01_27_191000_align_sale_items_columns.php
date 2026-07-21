@@ -34,35 +34,77 @@ return new class extends Migration
         }
 
         // Step 2: Additions / Missing Columns
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             // Ensure base columns exist if rename failed or wasn't needed (safety net)
             if (! Schema::hasColumn('sale_items', 'qty')) {
-                $table->decimal('qty', 12, 2)->default(0)->after('product_id');
+
+                if (!Schema::hasColumn('sale_items', 'qty')) {
+
+                    $table->decimal('qty', 12, 2)->default(0)->after('product_id');
+
+                }
             }
             if (! Schema::hasColumn('sale_items', 'price')) {
-                $table->decimal('price', 12, 2)->default(0)->after('qty');
+
+                if (!Schema::hasColumn('sale_items', 'price')) {
+
+                    $table->decimal('price', 12, 2)->default(0)->after('qty');
+
+                }
             }
             if (! Schema::hasColumn('sale_items', 'total')) {
-                $table->decimal('total', 12, 2)->default(0)->after('price');
+
+                if (!Schema::hasColumn('sale_items', 'total')) {
+
+                    $table->decimal('total', 12, 2)->default(0)->after('price');
+
+                }
             }
 
             // Add new missing columns
             if (! Schema::hasColumn('sale_items', 'total_pieces')) {
-                $table->integer('total_pieces')->default(0)->after('qty');
+
+                if (!Schema::hasColumn('sale_items', 'total_pieces')) {
+
+                    $table->integer('total_pieces')->default(0)->after('qty');
+
+                }
             }
             if (! Schema::hasColumn('sale_items', 'loose_pieces')) {
-                $table->integer('loose_pieces')->default(0)->after('total_pieces');
+
+                if (!Schema::hasColumn('sale_items', 'loose_pieces')) {
+
+                    $table->integer('loose_pieces')->default(0)->after('total_pieces');
+
+                }
             }
             if (! Schema::hasColumn('sale_items', 'price_per_piece')) {
-                $table->decimal('price_per_piece', 12, 2)->default(0)->after('price');
+
+                if (!Schema::hasColumn('sale_items', 'price_per_piece')) {
+
+                    $table->decimal('price_per_piece', 12, 2)->default(0)->after('price');
+
+                }
             }
             if (! Schema::hasColumn('sale_items', 'price_per_m2')) {
-                $table->decimal('price_per_m2', 12, 2)->default(0)->after('price_per_piece');
+
+                if (!Schema::hasColumn('sale_items', 'price_per_m2')) {
+
+                    $table->decimal('price_per_m2', 12, 2)->default(0)->after('price_per_piece');
+
+                }
             }
             if (! Schema::hasColumn('sale_items', 'color')) {
-                $table->text('color')->nullable()->after('product_id');
+
+                if (!Schema::hasColumn('sale_items', 'color')) {
+
+                    $table->text('color')->nullable()->after('product_id');
+
+                }
             }
-        });
+            });
+}
     }
 
     public function down(): void
@@ -72,8 +114,10 @@ return new class extends Migration
         // DB::statement("ALTER TABLE sale_items CHANGE price sales_price DECIMAL(12, 2) DEFAULT 0");
         // DB::statement("ALTER TABLE sale_items CHANGE total amount DECIMAL(12, 2) DEFAULT 0");
 
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             $table->dropColumn(['total_pieces', 'loose_pieces', 'price_per_piece', 'price_per_m2', 'color']);
-        });
+            });
+}
     }
 };

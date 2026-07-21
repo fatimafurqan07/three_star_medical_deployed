@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_payroll_details', function (Blueprint $table) {
+        if (Schema::hasTable('hr_payroll_details')) {
+    Schema::table('hr_payroll_details', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_payroll_details', function (Blueprint $table) {
+        if (Schema::hasTable('hr_payroll_details')) {
+    Schema::table('hr_payroll_details', function (Blueprint $table) {
             //
-        });
+            });
+}
     }
 };

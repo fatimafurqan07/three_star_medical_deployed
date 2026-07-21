@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchases', function (Blueprint $table) {
-            $table->string('po_ref')->nullable()->after('invoice_no');
-        });
+        if (Schema::hasTable('purchases')) {
+    Schema::table('purchases', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('purchases', 'po_ref')) {
+
+                $table->string('po_ref')->nullable()->after('invoice_no');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchases', function (Blueprint $table) {
+        if (Schema::hasTable('purchases')) {
+    Schema::table('purchases', function (Blueprint $table) {
             $table->dropColumn('po_ref');
-        });
+            });
+}
     }
 };

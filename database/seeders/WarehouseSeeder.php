@@ -10,17 +10,44 @@ class WarehouseSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * Seeds demo warehouses (type = 'warehouse').
+     * Shops are auto-created per branch via Warehouse::ensureShopWarehousesExists()
+     * (called by EnsureShopWarehouses middleware on first login).
      */
     public function run(): void
     {
         $warehouses = [
-            ['branch_id' => '1', 'warehouse_name' => 'Main Store', 'creater_id' => 1, 'location' => 'Karachi', 'remarks' => 'Main stock storage'],
-            ['branch_id' => '1', 'warehouse_name' => 'Branch A', 'creater_id' => 1, 'location' => 'Lahore', 'remarks' => 'North region store'],
-            ['branch_id' => '1', 'warehouse_name' => 'Branch B', 'creater_id' => 1, 'location' => 'Islamabad', 'remarks' => 'Capital branch'],
+            [
+                'branch_id'      => 1,
+                'warehouse_name' => 'warehouse1',
+                'type'           => 'warehouse',
+                'creater_id'     => 1,
+                'location'       => 'Karachi',
+                'remarks'        => 'Main stock storage',
+            ],
+            [
+                'branch_id'      => 1,
+                'warehouse_name' => 'warehouse2',
+                'type'           => 'warehouse',
+                'creater_id'     => 1,
+                'location'       => 'Lahore',
+                'remarks'        => 'North region store',
+            ],
+            [
+                'branch_id'      => 1,
+                'warehouse_name' => 'warehouse3',
+                'type'           => 'warehouse',
+                'creater_id'     => 1,
+                'location'       => 'Islamabad',
+                'remarks'        => 'Capital branch',
+            ],
         ];
 
         foreach ($warehouses as $data) {
-            Warehouse::firstOrCreate(['warehouse_name' => $data['warehouse_name']], $data);
+            Warehouse::firstOrCreate(
+                ['warehouse_name' => $data['warehouse_name']],
+                $data
+            );
         }
     }
 }

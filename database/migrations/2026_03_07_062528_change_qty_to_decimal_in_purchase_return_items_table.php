@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchase_return_items', function (Blueprint $table) {
-            $table->decimal('qty', 12, 3)->change();
-        });
+        if (Schema::hasTable('purchase_return_items')) {
+    Schema::table('purchase_return_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('purchase_return_items', 'qty')) {
+
+                $table->decimal('qty', 12, 3)->change();
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchase_return_items', function (Blueprint $table) {
-            $table->integer('qty')->change();
-        });
+        if (Schema::hasTable('purchase_return_items')) {
+    Schema::table('purchase_return_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('purchase_return_items', 'qty')) {
+
+                $table->integer('qty')->change();
+
+            }
+            });
+}
     }
 };

@@ -11,16 +11,30 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('can_approve_returns')->default(false)->after('email');
-            $table->boolean('can_approve_past_deadline_returns')->default(false)->after('can_approve_returns');
-        });
+        if (Schema::hasTable('users')) {
+    Schema::table('users', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('users', 'can_approve_returns')) {
+
+                $table->boolean('can_approve_returns')->default(false)->after('email');
+
+            }
+
+            if (!Schema::hasColumn('users', 'can_approve_past_deadline_returns')) {
+
+                $table->boolean('can_approve_past_deadline_returns')->default(false)->after('can_approve_returns');
+
+            }
+            });
+}
     }
 
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
+        if (Schema::hasTable('users')) {
+    Schema::table('users', function (Blueprint $table) {
             $table->dropColumn(['can_approve_returns', 'can_approve_past_deadline_returns']);
-        });
+            });
+}
     }
 };

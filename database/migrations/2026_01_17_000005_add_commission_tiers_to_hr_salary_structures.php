@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             // Commission tiers (JSON for tiered commission)
             // Format: [{"percentage": 2, "upto_amount": 10000}, {"percentage": 5, "upto_amount": 20000}]
-            $table->json('commission_tiers')->nullable()->after('sales_target');
-        });
+
+            if (!Schema::hasColumn('hr_salary_structures', 'commission_tiers')) {
+
+                $table->json('commission_tiers')->nullable()->after('sales_target');
+
+            }
+            });
+}
     }
 
     /**
@@ -23,8 +30,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('hr_salary_structures')) {
+    Schema::table('hr_salary_structures', function (Blueprint $table) {
             $table->dropColumn('commission_tiers');
-        });
+            });
+}
     }
 };

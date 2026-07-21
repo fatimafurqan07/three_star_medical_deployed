@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('purchases', function (Blueprint $table) {
-            $table->decimal('freight_charges', 15, 2)->default(0)->after('extra_cost');
-        });
+        if (Schema::hasTable('purchases')) {
+    Schema::table('purchases', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('purchases', 'freight_charges')) {
+
+                $table->decimal('freight_charges', 15, 2)->default(0)->after('extra_cost');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('purchases', function (Blueprint $table) {
+        if (Schema::hasTable('purchases')) {
+    Schema::table('purchases', function (Blueprint $table) {
             $table->dropColumn('freight_charges');
-        });
+            });
+}
     }
 };

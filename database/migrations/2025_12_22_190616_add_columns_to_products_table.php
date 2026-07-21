@@ -11,14 +11,46 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->string('model')->nullable();
-            $table->string('hs_code')->nullable();
-            $table->string('pack_type')->nullable();
-            $table->string('pack_qty')->nullable();
-            $table->string('piece_per_pack')->nullable();
-            $table->string('loose_piece')->nullable();
-        });
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('products', 'model')) {
+
+                $table->string('model')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'hs_code')) {
+
+                $table->string('hs_code')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'pack_type')) {
+
+                $table->string('pack_type')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'pack_qty')) {
+
+                $table->string('pack_qty')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'piece_per_pack')) {
+
+                $table->string('piece_per_pack')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'loose_piece')) {
+
+                $table->string('loose_piece')->nullable();
+
+            }
+            });
+}
     }
 
     /**
@@ -26,8 +58,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             
-        });
+            });
+}
     }
 };

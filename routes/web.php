@@ -99,6 +99,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/productview/{id}', [ProductController::class, 'productview'])->name('productview');
     Route::get('/products/search', [ProductController::class, 'searchProducts'])->name('products.search');
     Route::get('/api/product-filters', [ProductController::class, 'getProductFilters'])->name('products.filters');
+    Route::get('/products/download-template', [ProductController::class, 'downloadTemplate'])->name('products.download-template');
+    Route::post('/products/import', [ProductController::class, 'importProducts'])->name('products.import');
 
     // //////////
     Route::get('/products/price', [ProductController::class, 'getPrice'])
@@ -133,7 +135,8 @@ Route::middleware('auth')->group(function () {
 
     // Single customer detail
     Route::get('sale/customers/{id}', [CustomerController::class, 'show'])->middleware('permission:customers.view')->name('salecustomers.show');
-    // Cutomer create
+    Route::get('/customers/download-template', [CustomerController::class, 'downloadTemplate'])->middleware('permission:customers.view')->name('customers.download-template');
+    Route::post('/customers/import', [CustomerController::class, 'importCustomers'])->middleware('permission:customers.create')->name('customers.import');
     Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:customers.view')->name('customers.index');
     Route::get('/customers/create', [CustomerController::class, 'create'])->middleware('permission:customers.create')->name('customers.create');
     Route::post('/customers/store', [CustomerController::class, 'store'])->middleware('permission:customers.create')->name('customers.store');

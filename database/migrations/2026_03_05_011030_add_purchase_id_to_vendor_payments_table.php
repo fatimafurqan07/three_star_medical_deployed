@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vendor_payments', function (Blueprint $table) {
-            $table->unsignedBigInteger('purchase_id')->nullable()->after('vendor_id');
-        });
+        if (Schema::hasTable('vendor_payments')) {
+    Schema::table('vendor_payments', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendor_payments', 'purchase_id')) {
+
+                $table->unsignedBigInteger('purchase_id')->nullable()->after('vendor_id');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vendor_payments', function (Blueprint $table) {
+        if (Schema::hasTable('vendor_payments')) {
+    Schema::table('vendor_payments', function (Blueprint $table) {
             $table->dropColumn('purchase_id');
-        });
+            });
+}
     }
 };

@@ -81,4 +81,55 @@ class Product extends Model
     {
         return $this->hasMany(ProductUom::class);
     }
+
+    // Virtual Accessors for dropped columns to prevent application crashes
+    public function getHeightAttribute()
+    {
+        return 0.00;
+    }
+
+    public function getWidthAttribute()
+    {
+        return 0.00;
+    }
+
+    public function getTotalM2Attribute()
+    {
+        return 0.00;
+    }
+
+    public function getPiecesPerM2Attribute()
+    {
+        return 0.00;
+    }
+
+    public function getPricePerM2Attribute()
+    {
+        return 0.00;
+    }
+
+    public function getPurchasePricePerM2Attribute()
+    {
+        return 0.00;
+    }
+
+    public function getBoxesQuantityAttribute()
+    {
+        return 0;
+    }
+
+    public function getLoosePiecesAttribute()
+    {
+        return 0;
+    }
+
+    public function getPieceQuantityAttribute()
+    {
+        return 0;
+    }
+
+    public function getTotalStockQtyAttribute()
+    {
+        return 0.00;
+    }
 }

@@ -11,13 +11,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             //
-            $table->text('initial_stock')->nullable();
-            $table->text('wholesale_price')->nullable();
-        $table->string('image',255)->nullable();
 
-        });
+            if (!Schema::hasColumn('products', 'initial_stock')) {
+
+                $table->text('initial_stock')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'wholesale_price')) {
+
+                $table->text('wholesale_price')->nullable();
+
+            }
+
+        if (!Schema::hasColumn('products', 'image')) {
+
+            $table->string('image',255)->nullable();
+
+        }
+
+            });
+}
     }
 
     /**
@@ -25,13 +42,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             //
              $table->dropColumn([
             'wholesale_price',
             'initial_stock',
             'image'
         ]);
-        });
+            });
+}
     }
 };

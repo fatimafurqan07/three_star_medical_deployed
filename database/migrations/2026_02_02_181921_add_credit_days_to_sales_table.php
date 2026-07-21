@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
-            $table->integer('credit_days')->nullable()->after('sale_status');
-            $table->date('due_date')->nullable()->index()->after('credit_days');
-        });
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sales', 'credit_days')) {
+
+                $table->integer('credit_days')->nullable()->after('sale_status');
+
+            }
+
+            if (!Schema::hasColumn('sales', 'due_date')) {
+
+                $table->date('due_date')->nullable()->index()->after('credit_days');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sales', function (Blueprint $table) {
+        if (Schema::hasTable('sales')) {
+    Schema::table('sales', function (Blueprint $table) {
             $table->dropColumn(['credit_days', 'due_date']);
-        });
+            });
+}
     }
 };

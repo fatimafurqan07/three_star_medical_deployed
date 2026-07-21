@@ -342,6 +342,7 @@ class SaleReturnController extends Controller
                 'remarks' => $validated['remarks'] ?? null,
                 'status' => 'posted',
                 'branch_id' => $branchId ?? 1,
+                'created_by' => auth()->id() ?? 1,
             ]);
 
             $sale = $validated['sale_id'] ? Sale::find($validated['sale_id']) : null;
@@ -590,7 +591,7 @@ class SaleReturnController extends Controller
     public function saleReturnIndex()
     {
         $branchId = $this->getBranchId();
-        $returns = SaleReturn::with(['customer', 'sale', 'warehouse'])
+        $returns = SaleReturn::with(['customer', 'sale', 'warehouse', 'createdBy'])
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->latest()
             ->get();

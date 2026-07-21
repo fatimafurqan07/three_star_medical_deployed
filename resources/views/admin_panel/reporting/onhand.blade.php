@@ -652,7 +652,7 @@
                                 <th class="tr">Cost&nbsp;Value</th>
                                 <th class="tr">Sale&nbsp;Value</th>
                                 <th>Status</th>
-                                <th>Warehouses</th>
+                                <th>Locations</th>
                                 <th>Details</th>
                             </tr>
                         </thead>

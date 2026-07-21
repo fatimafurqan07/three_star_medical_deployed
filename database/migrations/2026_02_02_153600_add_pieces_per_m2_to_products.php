@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->decimal('pieces_per_m2', 10, 2)->default(0)->after('pieces_per_box');
-        });
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('products', 'pieces_per_m2')) {
+
+                $table->decimal('pieces_per_m2', 10, 2)->default(0)->after('pieces_per_box');
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             $table->dropColumn('pieces_per_m2');
-        });
+            });
+}
     }
 };

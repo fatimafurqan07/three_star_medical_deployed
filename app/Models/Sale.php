@@ -22,6 +22,11 @@ class Sale extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function customer_relation()
     {
         return $this->belongsTo(Customer::class, 'customer_id', 'id');

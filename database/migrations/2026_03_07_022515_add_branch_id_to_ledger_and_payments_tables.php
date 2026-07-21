@@ -11,18 +11,46 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
-            $table->unsignedBigInteger('branch_id')->nullable()->after('customer_id');
-        });
-        Schema::table('vendor_ledgers', function (Blueprint $table) {
-            $table->unsignedBigInteger('branch_id')->nullable()->after('vendor_id');
-        });
-        Schema::table('customer_payments', function (Blueprint $table) {
-            $table->unsignedBigInteger('branch_id')->nullable()->after('customer_id');
-        });
-        Schema::table('vendor_payments', function (Blueprint $table) {
-            $table->unsignedBigInteger('branch_id')->nullable()->after('vendor_id');
-        });
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customer_ledgers', 'branch_id')) {
+
+                $table->unsignedBigInteger('branch_id')->nullable()->after('customer_id');
+
+            }
+            });
+}
+        if (Schema::hasTable('vendor_ledgers')) {
+    Schema::table('vendor_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendor_ledgers', 'branch_id')) {
+
+                $table->unsignedBigInteger('branch_id')->nullable()->after('vendor_id');
+
+            }
+            });
+}
+        if (Schema::hasTable('customer_payments')) {
+    Schema::table('customer_payments', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customer_payments', 'branch_id')) {
+
+                $table->unsignedBigInteger('branch_id')->nullable()->after('customer_id');
+
+            }
+            });
+}
+        if (Schema::hasTable('vendor_payments')) {
+    Schema::table('vendor_payments', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendor_payments', 'branch_id')) {
+
+                $table->unsignedBigInteger('branch_id')->nullable()->after('vendor_id');
+
+            }
+            });
+}
 
         // Data migration: Populate branch_id from customers/vendors
         DB::statement('UPDATE customer_ledgers cl JOIN customers c ON cl.customer_id = c.id SET cl.branch_id = c.branch_id WHERE cl.branch_id IS NULL');
@@ -33,17 +61,25 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
             $table->dropColumn('branch_id');
-        });
-        Schema::table('vendor_ledgers', function (Blueprint $table) {
+            });
+}
+        if (Schema::hasTable('vendor_ledgers')) {
+    Schema::table('vendor_ledgers', function (Blueprint $table) {
             $table->dropColumn('branch_id');
-        });
-        Schema::table('customer_payments', function (Blueprint $table) {
+            });
+}
+        if (Schema::hasTable('customer_payments')) {
+    Schema::table('customer_payments', function (Blueprint $table) {
             $table->dropColumn('branch_id');
-        });
-        Schema::table('vendor_payments', function (Blueprint $table) {
+            });
+}
+        if (Schema::hasTable('vendor_payments')) {
+    Schema::table('vendor_payments', function (Blueprint $table) {
             $table->dropColumn('branch_id');
-        });
+            });
+}
     }
 };

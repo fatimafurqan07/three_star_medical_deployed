@@ -1,0 +1,4 @@
+Item Code,Item Name,Category,Sub Category,Brand,Unit,Pieces Per Box,Purchase Price,Sale Price,Model,MDR,HS Code,Is Fridge,Is Non Fridge,Is Fast Moving,Is Slow Moving
+ITEM-1001,Premium Sofa,Furniture,Living Room,Royal Brand,Piece,1,15000.00,18500.00,R-2026,MDR-889,9401.61.00,0,1,1,0
+ITEM-1002,Office Chair,Furniture,Office,Ergo,Piece,1,8500.00,11000.00,E-500,MDR-776,9403.30.00,0,1,0,1
+ITEM-1003,Double Bed,Furniture,Bedroom,Royal Brand,Piece,1,28000.00,34000.00,B-700,MDR-554,9403.50.00,0,1,1,0

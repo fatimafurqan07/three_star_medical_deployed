@@ -11,10 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
-            $table->string('source_type')->nullable()->after('description');
-            $table->unsignedBigInteger('source_id')->nullable()->after('source_type');
-        });
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('customer_ledgers', 'source_type')) {
+
+                $table->string('source_type')->nullable()->after('description');
+
+            }
+
+            if (!Schema::hasColumn('customer_ledgers', 'source_id')) {
+
+                $table->unsignedBigInteger('source_id')->nullable()->after('source_type');
+
+            }
+            });
+}
     }
 
     /**
@@ -22,8 +34,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('customer_ledgers', function (Blueprint $table) {
+        if (Schema::hasTable('customer_ledgers')) {
+    Schema::table('customer_ledgers', function (Blueprint $table) {
             $table->dropColumn(['source_type', 'source_id']);
-        });
+            });
+}
     }
 };

@@ -26,20 +26,27 @@ return new class extends Migration
     public function down(): void
     {
         // Add columns back
-        Schema::table('products', function (Blueprint $table) {
-            $table->boolean('is_part')->default(0)->after('brand_id');
-            $table->boolean('is_assembled')->default(0)->after('is_part');
-        });
+        if (Schema::hasTable('products')) {
+            Schema::table('products', function (Blueprint $table) {
+                if (!Schema::hasColumn('products', 'is_part')) {
+                    $table->boolean('is_part')->default(0)->after('brand_id');
+                }
+                if (!Schema::hasColumn('products', 'is_assembled')) {
+                    $table->boolean('is_assembled')->default(0)->after('is_part');
+                }
+            });
+        }
 
         // Create table back
-        Schema::create('product_boms', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->foreignId('part_id')->constrained('products')->cascadeOnDelete();
-            $table->decimal('qty_per_unit', 12, 3);
-            $table->timestamps();
-
-            $table->unique(['product_id', 'part_id']);
-        });
+        if (!Schema::hasTable('product_boms')) {
+            Schema::create('product_boms', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+                $table->foreignId('part_id')->constrained('products')->cascadeOnDelete();
+                $table->decimal('qty_per_unit', 12, 3);
+                $table->timestamps();
+                $table->unique(['product_id', 'part_id']);
+            });
+        }
     }
 };

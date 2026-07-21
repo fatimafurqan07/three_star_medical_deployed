@@ -16,67 +16,148 @@ class ProductSeeder extends Seeder
      */
     public function run(): void
     {
-        // Sample category
-        $category = Category::firstOrCreate(['name' => 'Electronics']);
-        $subCategory = Subcategory::firstOrCreate([
-            'category_id' => $category->id,
-            'name' => 'Air-Condition(AC)',
-        ]);
+        $csvPath = base_path('products_raw.csv');
+        if (!file_exists($csvPath)) {
+            $this->command->error("CSV file not found at: $csvPath");
+            return;
+        }
 
-        $unit = Unit::firstOrCreate(['name' => 'Piece']);
-        $brand = Brand::firstOrCreate(['name' => 'Samsung']); // brand add
+        // Disable foreign key constraints and truncate tables
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        \App\Models\WarehouseStock::truncate();
+        \App\Models\Product::truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
-        // 🔁 Auto-generate item code
-        $lastId = Product::max('id') ?? 0;
-        $nextId = $lastId + 1;
-        $itemCode = 'ITEM-'.str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        $file = fopen($csvPath, 'r');
+        $header = fgetcsv($file);
+        $header = array_map('trim', $header);
 
-        // Sample product
-        // Sample product
-        $product = Product::create([
-            'creater_id' => 1,
-            'category_id' => $category->id,
-            'sub_category_id' => $subCategory->id,
-            'brand_id' => $brand->id,
-            'is_part' => 0,
-            'is_assembled' => 0,
-            'item_code' => $itemCode,
-            'unit_id' => $unit->id,
-            'item_name' => 'Formal Shirt',
-            'color' => json_encode(['Black']),
-            // 'price' removed, using specific fields
-            'sale_price_per_box' => 5000,
-            'sale_price_per_piece' => 5000 / 12, // Calculated
-            'purchase_price_per_piece' => 375,
-            'purchase_price_per_box' => 375 * 12, // Calculated
+        $catIdx = array_search('CATEGORY', $header);
+        $subCatIdx = array_search('SUBCATEGORY', $header);
+        $brandIdx = array_search('BRAND', $header);
+        $nameIdx = array_search('PRODUCT NAME', $header);
+        $codeIdx = array_search('ITEM CODE', $header);
+        $hsIdx = array_search('HS CODE', $header);
+        $modelIdx = array_search('MODEL SERIES', $header);
+        $mdrIdx = array_search('MDR', $header);
+        $colorIdx = array_search('COLOR/TAGS', $header);
+        $pcsIdx = array_search('PCS PER PACK', $header);
 
-            // New fields
-            'size_mode' => 'by_cartons',
-            'pieces_per_box' => 12,
+        // Default Unit
+        $unit = \App\Models\Unit::firstOrCreate(['name' => 'Piece']);
 
-            // Fix defaults for non-nullable fields
-            'total_m2' => 0,
-            'height' => 0,
-            'width' => 0,
-            'pieces_per_m2' => 0,
-            'price_per_m2' => 0,
-            'purchase_price_per_m2' => 0,
+        // Default Warehouse
+        $warehouse = \App\Models\Warehouse::first();
+        if (!$warehouse) {
+            $this->command->error("No warehouses found. Ensure WarehouseSeeder runs before ProductSeeder.");
+            return;
+        }
 
-            'barcode_path' => rand(100000000000, 999999999999),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $importedCount = 0;
+        $autoCodeCounter = 1;
 
-        // Also populate Warehouse Stock for this product
-        $warehouse = \App\Models\Warehouse::first(); // Assuming WarehouseSeeder ran
-        if ($warehouse) {
+        while (($row = fgetcsv($file)) !== false) {
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
+            $catName = trim($row[$catIdx] ?? '');
+            $subName = trim($row[$subCatIdx] ?? '');
+            $brandName = trim($row[$brandIdx] ?? '');
+            $itemName = trim($row[$nameIdx] ?? '');
+            $itemCode = trim($row[$codeIdx] ?? '');
+            $hsCode = trim($row[$hsIdx] ?? '');
+            $model = trim($row[$modelIdx] ?? '');
+            $mdr = trim($row[$mdrIdx] ?? '');
+            $colorVal = trim($row[$colorIdx] ?? '');
+            $pcsPerPack = trim($row[$pcsIdx] ?? '');
+
+            // Resolve Category
+            $categoryId = null;
+            if ($catName !== '') {
+                $category = \App\Models\Category::where('name', $catName)->first();
+                if ($category) {
+                    $categoryId = $category->id;
+                }
+            }
+
+            // Resolve Subcategory
+            $subCategoryId = null;
+            if ($categoryId && $subName !== '') {
+                $subcategory = \App\Models\Subcategory::where('category_id', $categoryId)
+                    ->where('name', $subName)
+                    ->first();
+                if ($subcategory) {
+                    $subCategoryId = $subcategory->id;
+                }
+            }
+
+            // Resolve Brand
+            $brandId = null;
+            if ($brandName !== '') {
+                $brand = \App\Models\Brand::where('name', $brandName)->first();
+                if ($brand) {
+                    $brandId = $brand->id;
+                }
+            }
+
+            // Handle empty item code
+            if ($itemCode === '') {
+                $itemCode = 'AUTO-' . str_pad($autoCodeCounter++, 5, '0', STR_PAD_LEFT);
+            }
+
+            // Parse pieces per box
+            $piecesPerBox = (int) $pcsPerPack;
+            if ($piecesPerBox <= 0) {
+                $piecesPerBox = 1;
+            }
+
+            // Format color tags as JSON array
+            $colorJson = $colorVal !== '' ? json_encode([$colorVal]) : json_encode([]);
+
+            // Create Product
+            $product = \App\Models\Product::create([
+                'creater_id' => 1,
+                'category_id' => $categoryId,
+                'sub_category_id' => $subCategoryId,
+                'brand_id' => $brandId,
+                'is_part' => 0,
+                'is_assembled' => 0,
+                'item_code' => $itemCode,
+                'unit_id' => $unit->id,
+                'item_name' => $itemName,
+                'size_mode' => 'by_cartons',
+                'pieces_per_box' => $piecesPerBox,
+                'sale_price_per_box' => 0,
+                'sale_price_per_piece' => 0,
+                'purchase_price_per_piece' => 0,
+                'purchase_price_per_box' => 0,
+                'color' => $colorJson,
+                'barcode_path' => rand(100000000000, 999999999999),
+                'model' => $model,
+                'mdr' => $mdr,
+                'hs_code' => $hsCode,
+                'is_fridge' => 0,
+                'is_non_fridge' => 0,
+                'is_fast_moving' => 0,
+                'is_slow_moving' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Seed initial warehouse stock
             \App\Models\WarehouseStock::create([
+                'branch_id' => $warehouse->branch_id,
                 'warehouse_id' => $warehouse->id,
                 'product_id' => $product->id,
-                'quantity' => 125, // Boxes
-                'total_pieces' => 125 * 12,
-                'remarks' => 'Seeded stock',
+                'quantity' => 100,
+                'total_pieces' => 100 * $piecesPerBox,
+                'remarks' => 'Seeded via CSV',
             ]);
+
+            $importedCount++;
         }
+
+        fclose($file);
     }
 }

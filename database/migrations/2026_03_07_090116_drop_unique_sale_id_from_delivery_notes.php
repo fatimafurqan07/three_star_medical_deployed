@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
             $table->dropForeign('delivery_notes_sale_id_foreign');
             $table->dropUnique('delivery_notes_sale_id_unique');
             $table->foreign('sale_id')->references('id')->on('sales')->cascadeOnDelete();
-        });
+            });
+}
     }
 
     /**
@@ -23,10 +25,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('delivery_notes', function (Blueprint $table) {
+        if (Schema::hasTable('delivery_notes')) {
+    Schema::table('delivery_notes', function (Blueprint $table) {
             $table->dropForeign('delivery_notes_sale_id_foreign');
             $table->unique('sale_id');
             $table->foreign('sale_id')->references('id')->on('sales')->cascadeOnDelete();
-        });
+            });
+}
     }
 };

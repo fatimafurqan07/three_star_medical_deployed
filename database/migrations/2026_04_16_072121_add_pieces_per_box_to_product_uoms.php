@@ -9,10 +9,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('product_uoms', function (Blueprint $table) {
+        if (Schema::hasTable('product_uoms')) {
+    Schema::table('product_uoms', function (Blueprint $table) {
             $table->unsignedInteger('pieces_per_box')->default(1)->after('name')
                   ->comment('How many base pieces fit in 1 unit of this UOM');
-        });
+            });
+}
 
         // Backfill: try to pull pieces_per_box from purchase_items.uom_factor
         // where the uom_id matches and uom_factor > 1
@@ -30,8 +32,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('product_uoms', function (Blueprint $table) {
+        if (Schema::hasTable('product_uoms')) {
+    Schema::table('product_uoms', function (Blueprint $table) {
             $table->dropColumn('pieces_per_box');
-        });
+            });
+}
     }
 };

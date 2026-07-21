@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vendors', function (Blueprint $table) {
-            $table->string('ftn_no')->after('drap_no')->nullable();
-        });
+        if (Schema::hasTable('vendors')) {
+    Schema::table('vendors', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('vendors', 'ftn_no')) {
+
+                $table->string('ftn_no')->after('drap_no')->nullable();
+
+            }
+            });
+}
     }
 
     /**
@@ -21,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vendors', function (Blueprint $table) {
+        if (Schema::hasTable('vendors')) {
+    Schema::table('vendors', function (Blueprint $table) {
             $table->dropColumn('ftn_no');
-        });
+            });
+}
     }
 };

@@ -11,10 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('employee_salary_structures', function (Blueprint $table) {
-            $table->boolean('is_custom')->default(false)->after('is_active');
+        if (Schema::hasTable('employee_salary_structures')) {
+    Schema::table('employee_salary_structures', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('employee_salary_structures', 'is_custom')) {
+
+                $table->boolean('is_custom')->default(false)->after('is_active');
+
+            }
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete()->after('assigned_by');
-        });
+            });
+}
     }
 
     /**
@@ -22,9 +29,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('employee_salary_structures', function (Blueprint $table) {
+        if (Schema::hasTable('employee_salary_structures')) {
+    Schema::table('employee_salary_structures', function (Blueprint $table) {
             $table->dropForeign(['updated_by']);
             $table->dropColumn(['is_custom', 'updated_by']);
-        });
+            });
+}
     }
 };

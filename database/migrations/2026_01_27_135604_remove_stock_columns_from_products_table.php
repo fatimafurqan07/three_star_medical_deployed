@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
             $table->dropColumn([
                 'boxes_quantity',
                 'loose_pieces',
@@ -20,7 +21,8 @@ return new class extends Migration
                 'total_price',
                 'total_purchase_price',
             ]);
-        });
+            });
+}
     }
 
     /**
@@ -28,13 +30,45 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->integer('boxes_quantity')->nullable();
-            $table->integer('loose_pieces')->nullable();
-            $table->integer('piece_quantity')->nullable();
-            $table->integer('total_stock_qty')->nullable();
-            $table->decimal('total_price', 15, 2)->nullable();
-            $table->decimal('total_purchase_price', 15, 2)->nullable();
-        });
+        if (Schema::hasTable('products')) {
+    Schema::table('products', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('products', 'boxes_quantity')) {
+
+                $table->integer('boxes_quantity')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'loose_pieces')) {
+
+                $table->integer('loose_pieces')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'piece_quantity')) {
+
+                $table->integer('piece_quantity')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'total_stock_qty')) {
+
+                $table->integer('total_stock_qty')->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'total_price')) {
+
+                $table->decimal('total_price', 15, 2)->nullable();
+
+            }
+
+            if (!Schema::hasColumn('products', 'total_purchase_price')) {
+
+                $table->decimal('total_purchase_price', 15, 2)->nullable();
+
+            }
+            });
+}
     }
 };

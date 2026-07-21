@@ -8,15 +8,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('sale_items', function (Blueprint $table) {
-            $table->decimal('delivered_qty', 12, 3)->default(0)->after('qty');
-        });
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('sale_items', 'delivered_qty')) {
+
+                $table->decimal('delivered_qty', 12, 3)->default(0)->after('qty');
+
+            }
+            });
+}
     }
 
     public function down(): void
     {
-        Schema::table('sale_items', function (Blueprint $table) {
+        if (Schema::hasTable('sale_items')) {
+    Schema::table('sale_items', function (Blueprint $table) {
             $table->dropColumn('delivered_qty');
-        });
+            });
+}
     }
 };

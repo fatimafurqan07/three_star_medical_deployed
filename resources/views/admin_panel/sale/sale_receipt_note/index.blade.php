@@ -403,6 +403,13 @@
                                                 <span class="badge badge-warning text-dark uppercase fw-800 animate__animated animate__pulse animate__infinite" style="font-size: 0.65rem; border: 1px solid #d97706; padding: 4px 8px; border-radius: 6px;">UN-POSTED</span>
                                             @endif
                                         </div>
+                                        @if($sale->createdBy)
+                                            <div class="mt-1">
+                                                <span class="badge badge-light text-muted fw-bold" style="font-size: 0.65rem; border: 1px dashed var(--slate-200); padding: 2px 6px; border-radius: 4px;">
+                                                    <i class="fas fa-user me-1"></i>{{ $sale->createdBy->name }}
+                                                </span>
+                                            </div>
+                                        @endif
                                     </td>
                                     <td>
                                         <div class="vendor-box">

@@ -36,7 +36,7 @@ class SaleController extends Controller
     public function orderIndex()
     {
         $branchId = $this->getBranchId();
-        $sales = Sale::with(['customer_relation', 'items.product', 'returns', 'payments'])
+        $sales = Sale::with(['customer_relation', 'items.product', 'returns', 'payments', 'createdBy'])
             ->whereIn('sale_status', ['draft'])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
@@ -48,7 +48,7 @@ class SaleController extends Controller
     public function receiptIndex()
     {
         $branchId = $this->getBranchId();
-        $sales = Sale::with(['customer_relation', 'items.product', 'returns', 'payments'])
+        $sales = Sale::with(['customer_relation', 'items.product', 'returns', 'payments', 'createdBy'])
             ->whereIn('sale_status', ['post', 'un-post'])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
@@ -1112,6 +1112,9 @@ class SaleController extends Controller
             $sale->sale_status = $status;
             $sale->enable_hs_code = $request->enable_hs_code ? 1 : 0;
             $sale->branch_id   = $this->getBranchId();
+            if ($isNew) {
+                $sale->created_by = auth()->id() ?? 1;
+            }
 
             // Credit Days & Due Date (Optional)
             if ($request->filled('credit_days') && $request->credit_days > 0) {

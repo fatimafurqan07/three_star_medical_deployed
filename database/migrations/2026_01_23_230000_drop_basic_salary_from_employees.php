@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
             if (Schema::hasColumn('hr_employees', 'basic_salary')) {
                 $table->dropColumn('basic_salary');
             }
-        });
+            });
+}
     }
 
     /**
@@ -23,8 +25,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hr_employees', function (Blueprint $table) {
-            $table->decimal('basic_salary', 10, 2)->default(0)->after('joining_date');
-        });
+        if (Schema::hasTable('hr_employees')) {
+    Schema::table('hr_employees', function (Blueprint $table) {
+
+            if (!Schema::hasColumn('hr_employees', 'basic_salary')) {
+
+                $table->decimal('basic_salary', 10, 2)->default(0)->after('joining_date');
+
+            }
+            });
+}
     }
 };

@@ -437,10 +437,420 @@ class CustomerController extends Controller
 
     public function getByType(Request $request)
     {
-        $type = $request->get('type');
-
         $customers = Customer::where('customer_type', $type)->get(['id', 'customer_name']);
 
         return response()->json(['customers' => $customers]);
+    }
+
+    // =========================================================================
+    //  CUSTOMER IMPORT & TEMPLATE DOWNLOAD (CONSOLIDATED)
+    // =========================================================================
+
+    public function downloadTemplate()
+    {
+        $data = [
+            // Header Row
+            [
+                'CUSTOMER NAME', 'CUSTOMER ID', 'CUSTOMER TYPE', 'CNIC', 'MOBILE',
+                'EMAIL', 'CONTACT PERSON', 'ZONE', 'ADDRESS', 'CITY',
+                'FILER TYPE', 'NTN NO', 'GST NO', 'DSL NO', 'DRAP NO',
+                'OPENING BALANCE', 'CREDIT TERMS'
+            ],
+            // Sample Row 1
+            [
+                'Alpha Pharmacy & Healthcare', 'CUST-0001', 'Main Customer', '42101-1234567-1', '0300-1234567',
+                'info@alphapharm.com', 'Ali Raza', 'Lahore Central', '123 Main Commercial Market', 'Lahore',
+                'Filer', '1234567-8', '12-34-5678-910-11', 'DSL-9876', 'DRAP-5432',
+                '5000.00', '30 Days'
+            ],
+            // Sample Row 2
+            [
+                'Beta Medical Traders', 'CUST-0002', 'Distributor', '42201-9876543-2', '0321-7654321',
+                'sales@betamed.com', 'Tariq Mehmood', 'Karachi South', '45 Shahrah-e-Faisal', 'Karachi',
+                'Non-Filer', '7654321-0', '', '', '',
+                '0.00', 'Cash'
+            ]
+        ];
+
+        $xlsx = \Shuchkin\SimpleXLSXGen::fromArray($data);
+        $xlsx->setColWidth('A', 30);
+        $xlsx->setColWidth('B', 15);
+        $xlsx->setColWidth('C', 18);
+        $xlsx->setColWidth('D', 18);
+        $xlsx->setColWidth('E', 16);
+        $xlsx->setColWidth('F', 24);
+        $xlsx->setColWidth('G', 20);
+        $xlsx->setColWidth('H', 18);
+        $xlsx->setColWidth('I', 30);
+        $xlsx->setColWidth('J', 15);
+        $xlsx->setColWidth('K', 14);
+        $xlsx->setColWidth('L', 15);
+        $xlsx->setColWidth('M', 18);
+        $xlsx->setColWidth('N', 14);
+        $xlsx->setColWidth('O', 14);
+        $xlsx->setColWidth('P', 18);
+        $xlsx->setColWidth('Q', 15);
+
+        $tmpPath = storage_path('app/customer_template_' . uniqid() . '.xlsx');
+        $xlsx->saveAs($tmpPath);
+
+        return response()->download($tmpPath, 'customer_import_template.xlsx', [
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma'        => 'no-cache',
+        ])->deleteFileAfterSend(true);
+    }
+
+    public function importCustomers(Request $request)
+    {
+        $request->validate(['file' => 'required|file']);
+
+        try {
+            if (!$request->hasFile('file') || !$request->file('file')->isValid()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'No valid spreadsheet file was uploaded.',
+                ], 400);
+            }
+
+            $file      = $request->file('file');
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            if (!in_array($extension, ['csv', 'xlsx'])) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'Only CSV (.csv) and Excel (.xlsx) files are supported.',
+                ], 400);
+            }
+
+            // ── Parse file into $rawRows ──────────────────────────────────────
+            $rawRows = [];
+            if ($extension === 'xlsx') {
+                if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getRealPath())) {
+                    $rawRows = $xlsx->rows();
+                } else {
+                    return response()->json([
+                        'status'  => 'error',
+                        'type'    => 'format_error',
+                        'message' => 'Unable to parse the Excel file: ' . \Shuchkin\SimpleXLSX::parseError(),
+                    ], 400);
+                }
+            } else {
+                $handle = fopen($file->getRealPath(), 'r');
+                if (!$handle) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'type'    => 'format_error',
+                        'message' => 'Unable to open the uploaded file.',
+                    ], 400);
+                }
+
+                $bom = fread($handle, 3);
+                if ($bom !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+                    rewind($handle);
+                }
+
+                $firstLine = fgets($handle);
+                rewind($handle);
+                $bom2 = fread($handle, 3);
+                if ($bom2 !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+                    rewind($handle);
+                }
+
+                $commaCount     = substr_count($firstLine, ',');
+                $semicolonCount = substr_count($firstLine, ';');
+                $tabCount       = substr_count($firstLine, "\t");
+
+                $delimiter = ',';
+                if ($semicolonCount > $commaCount && $semicolonCount > $tabCount) {
+                    $delimiter = ';';
+                } elseif ($tabCount > $commaCount && $tabCount > $semicolonCount) {
+                    $delimiter = "\t";
+                }
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rawRows[] = $row;
+                }
+                fclose($handle);
+            }
+
+            if (empty($rawRows)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'Spreadsheet has no content.',
+                ], 400);
+            }
+
+            // ── Normalize header row ──────────────────────────────────────────
+            $rawHeaders = array_shift($rawRows);
+            $normalizedHeaders = array_map(function ($h) {
+                return strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '_', (string)$h), '_'));
+            }, $rawHeaders);
+
+            $aliases = [
+                'customer_name'  => 'customer_name',
+                'customername'   => 'customer_name',
+                'name'           => 'customer_name',
+                'party_name'     => 'customer_name',
+
+                'customer_id'    => 'customer_id',
+                'customerid'     => 'customer_id',
+                'id'             => 'customer_id',
+                'code'           => 'customer_id',
+                'cust_id'        => 'customer_id',
+
+                'customer_type'  => 'customer_type',
+                'customertype'   => 'customer_type',
+                'type'           => 'customer_type',
+                'party_type'     => 'customer_type',
+
+                'cnic'           => 'cnic',
+                'cnic_no'        => 'cnic',
+                'cnic_number'    => 'cnic',
+
+                'mobile'         => 'mobile',
+                'mobile_no'      => 'mobile',
+                'phone'          => 'mobile',
+                'cell'           => 'mobile',
+                'contact_no'     => 'mobile',
+
+                'email'          => 'email_address',
+                'email_address'  => 'email_address',
+
+                'contact_person' => 'contact_person',
+                'contactperson'  => 'contact_person',
+                'person'         => 'contact_person',
+
+                'zone'           => 'zone',
+                'area'           => 'zone',
+                'region'         => 'zone',
+
+                'address'        => 'address',
+                'street'         => 'address',
+
+                'city'           => 'city',
+
+                'filer_type'     => 'filer_type',
+                'filertype'      => 'filer_type',
+                'filer'          => 'filer_type',
+                'tax_status'     => 'filer_type',
+
+                'ntn'            => 'ntn_no',
+                'ntn_no'         => 'ntn_no',
+
+                'gst'            => 'gst_no',
+                'gst_no'         => 'gst_no',
+                'strn'           => 'gst_no',
+
+                'dsl'            => 'dsl_no',
+                'dsl_no'         => 'dsl_no',
+
+                'drap'           => 'drap_no',
+                'drap_no'        => 'drap_no',
+
+                'opening_balance' => 'opening_balance',
+                'openingbalance'  => 'opening_balance',
+                'balance'         => 'opening_balance',
+
+                'credit_terms'   => 'credit_terms',
+                'creditterms'    => 'credit_terms',
+            ];
+
+            $fieldMap = [];
+            foreach ($normalizedHeaders as $idx => $rawKey) {
+                $canonical = $aliases[$rawKey] ?? $rawKey;
+                if (!isset($fieldMap[$canonical])) {
+                    $fieldMap[$canonical] = $idx;
+                }
+            }
+
+            // ── Require at minimum: customer_name ────────────────────────────
+            if (!isset($fieldMap['customer_name'])) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'column_mismatch',
+                    'message' => 'Required column <strong>CUSTOMER NAME</strong> not found in your file.<br>Please download and use the provided template.',
+                ], 400);
+            }
+
+            $val = function (string $field, $default = '') use (&$row, &$fieldMap): string {
+                if (isset($fieldMap[$field]) && isset($row[$fieldMap[$field]])) {
+                    $v = trim((string)$row[$fieldMap[$field]]);
+                    return $v === '' ? (string)$default : $v;
+                }
+                return (string)$default;
+            };
+
+            $branchId      = $this->getBranchId() ?? 1;
+            $userId        = Auth::id();
+            $autoFillDummy = $request->boolean('auto_fill_dummy') || $request->input('auto_fill_dummy') == '1';
+
+            $rowCount      = 0;
+            $importedCount = 0;
+            $skippedCount  = 0;
+            $dummyCount    = 0;
+            $errors        = [];
+
+            $duplicateCount = 0;
+
+            \DB::beginTransaction();
+
+            foreach ($rawRows as $row) {
+                $rowCount++;
+
+                if (empty(array_filter(array_map('trim', $row)))) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                $customerName = trim($val('customer_name'));
+                $usedDummy    = false;
+
+                if (empty($customerName)) {
+                    if ($autoFillDummy) {
+                        $customerName = "[DUMMY] Customer Row {$rowCount}";
+                        $usedDummy    = true;
+                    } else {
+                        $errors[] = "Row {$rowCount}: Customer Name is required — row skipped.";
+                        continue;
+                    }
+                }
+
+                // ── Duplicate Check 1: customer_id already exists ──────────────
+                $customerId = trim($val('customer_id'));
+                if ($customerId !== '' && Customer::where('customer_id', $customerId)->exists()) {
+                    $duplicateCount++;
+                    $errors[] = "Row {$rowCount}: Customer ID '{$customerId}' already exists — skipped.";
+                    continue;
+                }
+
+                // ── Duplicate Check 2: same customer_name in same branch ───────
+                $existsByName = Customer::whereRaw('LOWER(TRIM(customer_name)) = ?', [strtolower($customerName)])
+                    ->where('branch_id', $branchId)
+                    ->exists();
+                if ($existsByName) {
+                    $duplicateCount++;
+                    $errors[] = "Row {$rowCount}: Customer '{$customerName}' already exists — skipped.";
+                    continue;
+                }
+
+                // ── Duplicate Check 3: same mobile number ─────────────────────
+                $mobileVal = trim($val('mobile'));
+                if ($mobileVal !== '') {
+                    $existsByMobile = Customer::where('mobile', $mobileVal)
+                        ->where('branch_id', $branchId)
+                        ->exists();
+                    if ($existsByMobile) {
+                        $duplicateCount++;
+                        $errors[] = "Row {$rowCount}: Mobile '{$mobileVal}' already registered to another customer — skipped.";
+                        continue;
+                    }
+                }
+
+                if ($usedDummy) {
+                    $dummyCount++;
+                }
+
+                // ── Auto-generate customer_id if empty ────────────────────────
+                if ($customerId === '') {
+                    $maxId      = Customer::max('id') ?: 0;
+                    $nextId     = $maxId + $rowCount;
+                    $customerId = 'CUST-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+                }
+
+                // Ensure customer_id uniqueness with suffix
+                $originalId = $customerId;
+                $suffix = 1;
+                while (Customer::where('customer_id', $customerId)->exists()) {
+                    $customerId = $originalId . '-' . $suffix++;
+                }
+
+                $opening = (float)$val('opening_balance', 0);
+                $customerType = trim($val('customer_type', 'Main Customer')) ?: 'Main Customer';
+
+                $customer = Customer::create([
+                    'customer_id'     => $customerId,
+                    'customer_name'   => $customerName,
+                    'customer_type'   => $customerType,
+                    'cnic'            => $val('cnic') ?: null,
+                    'mobile'          => $val('mobile') ?: null,
+                    'email_address'   => $val('email_address') ?: null,
+                    'contact_person'  => $val('contact_person') ?: null,
+                    'zone'            => $val('zone') ?: null,
+                    'address'         => $val('address') ?: null,
+                    'city'            => $val('city') ?: null,
+                    'filer_type'      => $val('filer_type', 'Non-Filer') ?: 'Non-Filer',
+                    'ntn_no'          => $val('ntn_no') ?: null,
+                    'gst_no'          => $val('gst_no') ?: null,
+                    'dsl_no'          => $val('dsl_no') ?: null,
+                    'drap_no'         => $val('drap_no') ?: null,
+                    'opening_balance' => $opening,
+                    'credit_terms'    => $val('credit_terms') ?: null,
+                    'status'          => 'active',
+                    'is_active'       => 1,
+                    'branch_id'       => $branchId,
+                ]);
+
+                // Create initial ledger & journal entry if opening balance > 0
+                if ($opening > 0) {
+                    CustomerLedger::create([
+                        'customer_id'      => $customer->id,
+                        'branch_id'        => $customer->branch_id,
+                        'admin_or_user_id' => $userId,
+                        'previous_balance' => $opening,
+                        'opening_balance'  => $opening,
+                        'closing_balance'  => $opening,
+                        'description'      => 'Imported Opening Balance',
+                    ]);
+
+                    try {
+                        $balanceService = app(\App\Services\BalanceService::class);
+                        $balanceService->ensureDefaultCOA();
+                        $arAccountId = $balanceService->getAccountsReceivableId();
+                        $journalService = app(\App\Services\JournalEntryService::class);
+
+                        $journalService->recordEntry(
+                            $customer,
+                            $arAccountId,
+                            $opening,
+                            0,
+                            "Opening Balance for Customer: {$customer->customer_name}",
+                            now()->toDateString(),
+                            $customer
+                        );
+                    } catch (\Exception $jeEx) {
+                        // Log or soft ignore if COA not configured
+                    }
+                }
+
+                $importedCount++;
+            }
+
+
+            \DB::commit();
+
+            return response()->json([
+                'status'          => 'success',
+                'imported_count'  => $importedCount,
+                'skipped_count'   => $skippedCount,
+                'dummy_count'     => $dummyCount,
+                'duplicate_count' => $duplicateCount,
+                'errors'          => $errors,
+                'message'         => "Successfully imported {$importedCount} customers."
+                    . ($duplicateCount > 0 ? " ({$duplicateCount} duplicates skipped)" : "")
+                    . ($dummyCount > 0 ? " ({$dummyCount} with dummy data)" : ""),
+            ]);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'type'    => 'exception',
+                'message' => 'Import failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
