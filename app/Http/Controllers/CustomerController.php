@@ -849,10 +849,22 @@ class CustomerController extends Controller
 
                 // ── Duplicate Check 1: customer_id already exists ──────────────
                 $customerId = trim($val('customer_id'));
-                if ($customerId !== '' && Customer::where('customer_id', $customerId)->exists()) {
-                    $duplicateCount++;
-                    $errors[] = "Row {$rowCount}: Customer ID '{$customerId}' already exists — skipped.";
-                    continue;
+                if ($customerId !== '') {
+                    $existingCust = Customer::where('customer_id', $customerId)->first();
+                    if ($existingCust) {
+                        if ($existingCust->branch_id == $rowBranchId) {
+                            $duplicateCount++;
+                            $errors[] = "Row {$rowCount}: Customer ID '{$customerId}' already exists in target branch — skipped.";
+                            continue;
+                        } else {
+                            // Exists but in a different branch. Generate unique customer_id suffix to allow it
+                            $originalId = $customerId;
+                            $suffix = 1;
+                            while (Customer::where('customer_id', $customerId)->exists()) {
+                                $customerId = $originalId . '-' . $suffix++;
+                            }
+                        }
+                    }
                 }
 
                 // ── Duplicate Check 2: same customer_name in same branch ───────
