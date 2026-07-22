@@ -76,6 +76,9 @@ class BranchController extends Controller
         $branch->address = $request->address;
         $branch->number = $request->number;
         $branch->is_active = $request->has('is_active') ? 1 : 0;
+        if (empty($editId)) {
+            $branch->user_id = auth()->id() ?: 1;
+        }
         $branch->save();
 
         return response()->json($msg);
