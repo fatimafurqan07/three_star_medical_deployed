@@ -294,4 +294,398 @@ class VendorController extends Controller
 
         return view('admin_panel.vendors.ledger', $ledgerData);
     }
+
+    // =========================================================================
+    //  VENDOR IMPORT & TEMPLATE DOWNLOAD (CONSOLIDATED)
+    // =========================================================================
+
+    public function downloadTemplate()
+    {
+        $data = [
+            // Header Row
+            [
+                'VENDOR NAME', 'VENDOR CODE', 'EMAIL', 'PHONE', 'ADDRESS',
+                'CITY', 'COUNTRY', 'BUSINESS NAME', 'NTN NO', 'CNIC',
+                'CONTACT PERSON', 'CREDIT LIMIT', 'OPENING BALANCE', 'CREDIT TERMS'
+            ],
+            // Sample Row 1
+            [
+                'Alpha Surgical Supplies', 'VND-0001', 'sales@alphasurgical.com', '0300-9876543', '12-A Industrial Area',
+                'Lahore', 'Pakistan', 'Alpha Surgical Ltd', '9876543-2', '42101-9876543-1',
+                'Kashif Shaheen', '500000', '15000.00', '30 Days'
+            ],
+            // Sample Row 2
+            [
+                'Beta Pharma Distributors', 'VND-0002', 'info@betapharma.com', '0321-4567890', '45 Commercial Market, Tariq Road',
+                'Karachi', 'Pakistan', 'Beta Pharma Group', '', '',
+                'Muhammad Asif', '1000000', '0.00', 'Cash'
+            ]
+        ];
+
+        $xlsx = \Shuchkin\SimpleXLSXGen::fromArray($data);
+        $xlsx->setColWidth('A', 30);
+        $xlsx->setColWidth('B', 15);
+        $xlsx->setColWidth('C', 24);
+        $xlsx->setColWidth('D', 16);
+        $xlsx->setColWidth('E', 30);
+        $xlsx->setColWidth('F', 15);
+        $xlsx->setColWidth('G', 15);
+        $xlsx->setColWidth('H', 24);
+        $xlsx->setColWidth('I', 15);
+        $xlsx->setColWidth('J', 18);
+        $xlsx->setColWidth('K', 20);
+        $xlsx->setColWidth('L', 15);
+        $xlsx->setColWidth('M', 18);
+        $xlsx->setColWidth('N', 15);
+
+        $tmpPath = storage_path('app/vendor_template_' . uniqid() . '.xlsx');
+        $xlsx->saveAs($tmpPath);
+
+        return response()->download($tmpPath, 'vendor_import_template.xlsx', [
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma'        => 'no-cache',
+        ])->deleteFileAfterSend(true);
+    }
+
+    public function importVendors(Request $request)
+    {
+        $request->validate(['file' => 'required|file']);
+
+        try {
+            if (!$request->hasFile('file') || !$request->file('file')->isValid()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'No valid spreadsheet file was uploaded.',
+                ], 400);
+            }
+
+            $file      = $request->file('file');
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            if (!in_array($extension, ['csv', 'xlsx'])) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'Only CSV (.csv) and Excel (.xlsx) files are supported.',
+                ], 400);
+            }
+
+            $rawRows = [];
+            if ($extension === 'xlsx') {
+                if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getRealPath())) {
+                    $rawRows = $xlsx->rows();
+                } else {
+                    return response()->json([
+                        'status'  => 'error',
+                        'type'    => 'format_error',
+                        'message' => 'Unable to parse the Excel file: ' . \Shuchkin\SimpleXLSX::parseError(),
+                    ], 400);
+                }
+            } else {
+                $handle = fopen($file->getRealPath(), 'r');
+                if (!$handle) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'type'    => 'format_error',
+                        'message' => 'Unable to open the uploaded file.',
+                    ], 400);
+                }
+
+                $bom = fread($handle, 3);
+                if ($bom !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+                    rewind($handle);
+                }
+
+                $firstLine = fgets($handle);
+                rewind($handle);
+                $bom2 = fread($handle, 3);
+                if ($bom2 !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+                    rewind($handle);
+                }
+
+                $commaCount     = substr_count($firstLine, ',');
+                $semicolonCount = substr_count($firstLine, ';');
+                $tabCount       = substr_count($firstLine, "\t");
+
+                $delimiter = ',';
+                if ($semicolonCount > $commaCount && $semicolonCount > $tabCount) {
+                    $delimiter = ';';
+                } elseif ($tabCount > $commaCount && $tabCount > $semicolonCount) {
+                    $delimiter = "\t";
+                }
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rawRows[] = $row;
+                }
+                fclose($handle);
+            }
+
+            if (empty($rawRows)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'format_error',
+                    'message' => 'Spreadsheet has no content.',
+                ], 400);
+            }
+
+            $rawHeaders = array_shift($rawRows);
+            $normalizedHeaders = array_map(function ($h) {
+                return strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '_', (string)$h), '_'));
+            }, $rawHeaders);
+
+            $aliases = [
+                'vendor_name'     => 'name',
+                'vendorname'      => 'name',
+                'name'            => 'name',
+                'party_name'      => 'name',
+                'supplier_name'   => 'name',
+
+                'vendor_code'     => 'vendor_code',
+                'vendorcode'      => 'vendor_code',
+                'code'            => 'vendor_code',
+                'id'              => 'vendor_code',
+
+                'email'           => 'email',
+                'email_address'   => 'email',
+
+                'phone'           => 'phone',
+                'phone_no'        => 'phone',
+                'mobile'          => 'phone',
+                'contact'         => 'phone',
+
+                'address'         => 'address',
+                'street'          => 'address',
+
+                'city'            => 'city',
+                'country'         => 'country',
+
+                'business_name'   => 'business_name',
+                'businessname'    => 'business_name',
+                'company'         => 'business_name',
+
+                'ntn'             => 'ntn_no',
+                'ntn_no'          => 'ntn_no',
+
+                'cnic'            => 'cnic',
+                'cnic_no'         => 'cnic',
+
+                'contact_person'  => 'contact_person',
+                'contactperson'   => 'contact_person',
+
+                'credit_limit'    => 'credit_limit',
+                'limit'           => 'credit_limit',
+
+                'opening_balance' => 'opening_balance',
+                'openingbalance'  => 'opening_balance',
+                'balance'         => 'opening_balance',
+
+                'credit_terms'    => 'credit_terms',
+                'creditterms'     => 'credit_terms',
+            ];
+
+            $fieldMap = [];
+            foreach ($normalizedHeaders as $idx => $rawKey) {
+                $canonical = $aliases[$rawKey] ?? $rawKey;
+                if (!isset($fieldMap[$canonical])) {
+                    $fieldMap[$canonical] = $idx;
+                }
+            }
+
+            // ── Require at minimum: name ─────────────────────────────────────
+            $validationErrors = [];
+            if (!isset($fieldMap['name'])) {
+                return response()->json([
+                    'status'  => 'error',
+                    'type'    => 'column_mismatch',
+                    'message' => 'Required column <strong>VENDOR NAME</strong> not found in your file.<br>Please download and use the provided template.',
+                ], 400);
+            }
+
+            $val = function (string $field, $default = '') use (&$row, &$fieldMap): string {
+                if (isset($fieldMap[$field]) && isset($row[$fieldMap[$field]])) {
+                    $v = trim((string)$row[$fieldMap[$field]]);
+                    return $v === '' ? (string)$default : $v;
+                }
+                return (string)$default;
+            };
+
+            $branchId = $this->getBranchId() ?? 1;
+            $userId   = auth()->id();
+
+            $rowCount       = 0;
+            $importedCount  = 0;
+            $skippedCount   = 0;
+            $dummyCount     = 0;
+            $duplicateCount = 0;
+            $errors         = [];
+
+            $autoFillDummy = $request->boolean('auto_fill_dummy') || $request->input('auto_fill_dummy') == '1';
+
+            \DB::beginTransaction();
+
+            foreach ($rawRows as $row) {
+                $rowCount++;
+
+                if (empty(array_filter(array_map('trim', $row)))) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                $vendorName = trim($val('name'));
+                $usedDummy  = false;
+
+                if (empty($vendorName)) {
+                    if ($autoFillDummy) {
+                        $vendorName = "[DUMMY] Vendor Row {$rowCount}";
+                        $usedDummy  = true;
+                    } else {
+                        $validationErrors[] = "Row {$rowCount}: Vendor Name is required.";
+                        continue;
+                    }
+                }
+
+                // ── Duplicate Check 1: vendor_code already exists ──────────────
+                $vendorCode = trim($val('vendor_code'));
+                if ($vendorCode !== '' && Vendor::where('vendor_code', $vendorCode)->exists()) {
+                    $duplicateCount++;
+                    $errors[] = "Row {$rowCount}: Vendor Code '{$vendorCode}' already exists — skipped.";
+                    continue;
+                }
+
+                // ── Duplicate Check 2: same name in same branch ────────────────
+                $existsByName = Vendor::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($vendorName)])
+                    ->where('branch_id', $branchId)
+                    ->exists();
+                if ($existsByName) {
+                    $duplicateCount++;
+                    $errors[] = "Row {$rowCount}: Vendor '{$vendorName}' already exists — skipped.";
+                    continue;
+                }
+
+                // ── Duplicate Check 3: same phone number ───────────────────────
+                $phoneVal = trim($val('phone'));
+                if ($phoneVal !== '') {
+                    $existsByPhone = Vendor::where('phone', $phoneVal)
+                        ->where('branch_id', $branchId)
+                        ->exists();
+                    if ($existsByPhone) {
+                        $duplicateCount++;
+                        $errors[] = "Row {$rowCount}: Phone '{$phoneVal}' already registered to another vendor — skipped.";
+                        continue;
+                    }
+                }
+
+                if ($usedDummy) {
+                    $dummyCount++;
+                }
+
+                // Auto-generate code if empty
+                if ($vendorCode === '') {
+                    $maxId      = Vendor::max('id') ?: 0;
+                    $nextId     = $maxId + $rowCount;
+                    $vendorCode = 'VND-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+                }
+
+                // Ensure vendor_code uniqueness
+                $originalCode = $vendorCode;
+                $suffix = 1;
+                while (Vendor::where('vendor_code', $vendorCode)->exists()) {
+                    $vendorCode = $originalCode . '-' . $suffix++;
+                }
+
+                $opening = (float)$val('opening_balance', 0);
+
+                $vendor = Vendor::create([
+                    'name'            => $vendorName,
+                    'vendor_code'     => $vendorCode,
+                    'email'           => $val('email') ?: null,
+                    'phone'           => $phoneVal ?: null,
+                    'address'         => $val('address') ?: null,
+                    'city'            => $val('city') ?: null,
+                    'country'         => $val('country') ?: 'Pakistan',
+                    'business_name'   => $val('business_name') ?: null,
+                    'ntn_no'          => $val('ntn_no') ?: null,
+                    'cnic'            => $val('cnic') ?: null,
+                    'contact_person'  => $val('contact_person') ?: null,
+                    'credit_limit'    => (float)$val('credit_limit', 0),
+                    'opening_balance' => $opening,
+                    'credit_terms'    => $val('credit_terms') ?: null,
+                    'is_active'       => 1,
+                    'branch_id'       => $branchId,
+                ]);
+
+                // Create ledger entry
+                VendorLedger::create([
+                    'vendor_id'        => $vendor->id,
+                    'branch_id'        => $vendor->branch_id,
+                    'admin_or_user_id' => $userId,
+                    'opening_balance'  => $opening,
+                    'closing_balance'  => $opening,
+                    'previous_balance' => $opening,
+                ]);
+
+                if ($opening > 0) {
+                    try {
+                        $balanceService = app(\App\Services\BalanceService::class);
+                        $balanceService->ensureDefaultCOA();
+                        $apAccountId = $balanceService->getAccountsPayableId();
+                        $journalService = app(\App\Services\JournalEntryService::class);
+
+                        $journalService->recordEntry(
+                            $vendor,
+                            $apAccountId,
+                            0,        // Debit 0
+                            $opening, // Credit AP
+                            "Opening Balance for Vendor: {$vendor->name}",
+                            now()->toDateString(),
+                            $vendor
+                        );
+                    } catch (\Exception $jeEx) {
+                        // Ignore if COA not configured
+                    }
+                }
+
+                $importedCount++;
+            }
+
+            // ── Abort if any validation errors (missing name) ─────────────────
+            if (!empty($validationErrors)) {
+                \DB::rollBack();
+                $shown = array_slice($validationErrors, 0, 10);
+                $more  = count($validationErrors) > 10 ? '<br>... and ' . (count($validationErrors) - 10) . ' more errors.' : '';
+                return response()->json([
+                    'status'        => 'error',
+                    'type'          => 'format_error',
+                    'can_auto_fill' => true,
+                    'message'       => 'Import aborted. Fix the following errors and re-upload:<br>'
+                                       . implode('<br>', $shown) . $more,
+                ], 400);
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'status'          => 'success',
+                'imported_count'  => $importedCount,
+                'skipped_count'   => $skippedCount,
+                'dummy_count'     => $dummyCount,
+                'duplicate_count' => $duplicateCount,
+                'errors'          => $errors,
+                'message'         => "Successfully imported {$importedCount} vendors."
+                    . ($duplicateCount > 0 ? " ({$duplicateCount} duplicates skipped)" : "")
+                    . ($dummyCount > 0 ? " ({$dummyCount} with dummy data)" : ""),
+            ]);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'type'    => 'exception',
+                'message' => 'Import failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
+

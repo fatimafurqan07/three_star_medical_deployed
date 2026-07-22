@@ -177,9 +177,12 @@
         <!-- Toolbar -->
         <div class="table-toolbar">
             <div class="product-search-bar flex-grow-1" style="max-width:420px;">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="search_all" class="form-control"
-                    placeholder="Search by name, code, category, brand...">
+                <div class="position-relative">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search_all" class="form-control" 
+                        value="{{ request('search') }}"
+                        placeholder="Search by name, code, category, brand...">
+                </div>
             </div>
             <span class="product-count-badge">{{ $products->total() }} Products</span>
         </div>
@@ -977,6 +980,50 @@
                     searchable: false,
                     orderable: false
                 }]
+            });
+
+            // Focus search input at the end of text after search reload
+            let searchInput = $('#search_all');
+            if (searchInput.length && searchInput.val()) {
+                let strLength = searchInput.val().length;
+                searchInput.focus();
+                searchInput[0].setSelectionRange(strLength, strLength);
+            }
+
+            // Live Search with Debounce
+            let searchTimer;
+            searchInput.on('input', function() {
+                clearTimeout(searchTimer);
+                let query = $(this).val();
+                searchTimer = setTimeout(function() {
+                    let url = new URL(window.location.href);
+                    if (query.trim() !== '') {
+                        url.searchParams.set('search', query);
+                        url.searchParams.delete('page'); // Reset to page 1 for new search
+                    } else {
+                        url.searchParams.delete('search');
+                        url.searchParams.delete('page');
+                    }
+                    window.location.href = url.toString();
+                }, 500); // 500ms delay
+            });
+
+            // Trigger immediately on Enter key
+            searchInput.on('keypress', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    clearTimeout(searchTimer);
+                    let query = $(this).val();
+                    let url = new URL(window.location.href);
+                    if (query.trim() !== '') {
+                        url.searchParams.set('search', query);
+                        url.searchParams.delete('page');
+                    } else {
+                        url.searchParams.delete('search');
+                        url.searchParams.delete('page');
+                    }
+                    window.location.href = url.toString();
+                }
             });
 
         });

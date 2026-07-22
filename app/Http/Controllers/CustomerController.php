@@ -454,21 +454,21 @@ class CustomerController extends Controller
                 'CUSTOMER NAME', 'CUSTOMER ID', 'CUSTOMER TYPE', 'CNIC', 'MOBILE',
                 'EMAIL', 'CONTACT PERSON', 'ZONE', 'ADDRESS', 'CITY',
                 'FILER TYPE', 'NTN NO', 'GST NO', 'DSL NO', 'DRAP NO',
-                'OPENING BALANCE', 'CREDIT TERMS'
+                'OPENING BALANCE', 'CREDIT TERMS', 'CREDIT LIMIT', 'SALES OFFICER', 'TARGET BRANCH'
             ],
             // Sample Row 1
             [
                 'Alpha Pharmacy & Healthcare', 'CUST-0001', 'Main Customer', '42101-1234567-1', '0300-1234567',
                 'info@alphapharm.com', 'Ali Raza', 'Lahore Central', '123 Main Commercial Market', 'Lahore',
                 'Filer', '1234567-8', '12-34-5678-910-11', 'DSL-9876', 'DRAP-5432',
-                '5000.00', '30 Days'
+                '5000.00', '30 Days', '150000.00', 'Kashif Ali', 'Main Branch'
             ],
             // Sample Row 2
             [
                 'Beta Medical Traders', 'CUST-0002', 'Distributor', '42201-9876543-2', '0321-7654321',
                 'sales@betamed.com', 'Tariq Mehmood', 'Karachi South', '45 Shahrah-e-Faisal', 'Karachi',
                 'Non-Filer', '7654321-0', '', '', '',
-                '0.00', 'Cash'
+                '0.00', 'Cash', '50000.00', '', 'Shop Branch'
             ]
         ];
 
@@ -490,6 +490,9 @@ class CustomerController extends Controller
         $xlsx->setColWidth('O', 14);
         $xlsx->setColWidth('P', 18);
         $xlsx->setColWidth('Q', 15);
+        $xlsx->setColWidth('R', 18);
+        $xlsx->setColWidth('S', 20);
+        $xlsx->setColWidth('T', 20);
 
         $tmpPath = storage_path('app/customer_template_' . uniqid() . '.xlsx');
         $xlsx->saveAs($tmpPath);
@@ -657,6 +660,16 @@ class CustomerController extends Controller
 
                 'credit_terms'   => 'credit_terms',
                 'creditterms'    => 'credit_terms',
+
+                'credit_limit'   => 'credit_limit',
+                'limit'          => 'credit_limit',
+                'balance_range'  => 'credit_limit',
+
+                'sales_officer'  => 'sales_officer',
+                'officer'        => 'sales_officer',
+
+                'target_branch'  => 'target_branch',
+                'branch'         => 'target_branch',
             ];
 
             $fieldMap = [];
@@ -684,9 +697,77 @@ class CustomerController extends Controller
                 return (string)$default;
             };
 
+            // ── Verify if target branches exist or need confirmation ──────────
+            $missingBranches = [];
+            $targetBranchIdx = $fieldMap['target_branch'] ?? null;
+            if ($targetBranchIdx !== null) {
+                $uniqueBranchNames = [];
+                foreach ($rawRows as $row) {
+                    if (empty(array_filter(array_map('trim', $row)))) {
+                        continue;
+                    }
+                    if (isset($row[$targetBranchIdx])) {
+                        $bName = trim((string)$row[$targetBranchIdx]);
+                        if ($bName !== '') {
+                            $uniqueBranchNames[strtolower($bName)] = $bName;
+                        }
+                    }
+                }
+
+                foreach ($uniqueBranchNames as $lowerName => $originalName) {
+                    $exists = \App\Models\Branch::where('name', 'LIKE', $originalName)->exists();
+                    if (!$exists) {
+                        $missingBranches[] = $originalName;
+                    }
+                }
+            }
+
+            // If missing branches found and user hasn't authorized creating them
+            $createMissing = $request->boolean('create_missing_branches') || $request->input('create_missing_branches') == '1';
+            if (!empty($missingBranches) && !$createMissing) {
+                return response()->json([
+                    'status'           => 'confirm_branch',
+                    'missing_branches' => $missingBranches,
+                    'message'          => 'New branch found that is not exist in database: ' . implode(', ', $missingBranches) . '.',
+                ]);
+            }
+
+            // ── Verify required fields (Customer Name) and need for dummy filling ──
+            $autoFillDummy = $request->boolean('auto_fill_dummy') || $request->input('auto_fill_dummy') == '1';
+            $validationErrors = [];
+            $tempRowCount = 0;
+            foreach ($rawRows as $row) {
+                $tempRowCount++;
+                if (empty(array_filter(array_map('trim', $row)))) {
+                    continue;
+                }
+                
+                // Read value using fieldMap
+                $cName = '';
+                if (isset($fieldMap['customer_name']) && isset($row[$fieldMap['customer_name']])) {
+                    $cName = trim((string)$row[$fieldMap['customer_name']]);
+                }
+
+                if (empty($cName) && !$autoFillDummy) {
+                    $validationErrors[] = "Row {$tempRowCount}: Customer Name is required.";
+                }
+            }
+
+            // If missing required fields and user hasn't confirmed dummy fill yet
+            if (!empty($validationErrors)) {
+                $shown = array_slice($validationErrors, 0, 10);
+                $more  = count($validationErrors) > 10 ? '<br>... and ' . (count($validationErrors) - 10) . ' more errors.' : '';
+                return response()->json([
+                    'status'        => 'error',
+                    'type'          => 'format_error',
+                    'can_auto_fill' => true,
+                    'message'       => 'Import aborted. Fix the following errors and re-upload:<br>'
+                                       . implode('<br>', $shown) . $more,
+                ], 400);
+            }
+
             $branchId      = $this->getBranchId() ?? 1;
             $userId        = Auth::id();
-            $autoFillDummy = $request->boolean('auto_fill_dummy') || $request->input('auto_fill_dummy') == '1';
 
             $rowCount      = 0;
             $importedCount = 0;
@@ -719,6 +800,53 @@ class CustomerController extends Controller
                     }
                 }
 
+                // ── Resolve Target Branch ─────────────────────────────────────
+                $rowBranch = trim($val('target_branch'));
+                $rowBranchId = $branchId; // Fallback to active branch
+                if ($rowBranch !== '') {
+                    $br = \App\Models\Branch::where('name', 'LIKE', $rowBranch)->first();
+                    if ($br) {
+                        $rowBranchId = $br->id;
+                    } else if ($createMissing) {
+                        // Automatically create the branch
+                        $code = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $rowBranch), 0, 3));
+                        if (empty($code)) {
+                            $code = 'BR' . rand(10, 99);
+                        }
+                        // Ensure unique branch code
+                        $originalCode = $code;
+                        $suffix = 1;
+                        while (\App\Models\Branch::where('branch_code', $code)->exists()) {
+                            $code = $originalCode . $suffix++;
+                        }
+
+                        $newBr = \App\Models\Branch::create([
+                            'name'        => $rowBranch,
+                            'branch_code' => $code,
+                            'address'     => 'Imported Location',
+                            'number'      => '0000-0000000',
+                            'is_active'   => 1,
+                            'user_id'     => $userId ?? 1,
+                        ]);
+                        $rowBranchId = $newBr->id;
+                    }
+                }
+
+                // ── Resolve Sales Officer ──────────────────────────────────────
+                $rowOfficerName = trim($val('sales_officer'));
+                $salesOfficerId = null;
+                if ($rowOfficerName !== '') {
+                    $emp = \App\Models\Hr\Employee::where(function($q) use ($rowOfficerName) {
+                        $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ['%' . $rowOfficerName . '%'])
+                          ->orWhere('first_name', 'LIKE', '%' . $rowOfficerName . '%');
+                    })->first();
+                    if ($emp) {
+                        $salesOfficerId = $emp->id;
+                    }
+                }
+
+                $creditLimit = (float)$val('credit_limit', 0);
+
                 // ── Duplicate Check 1: customer_id already exists ──────────────
                 $customerId = trim($val('customer_id'));
                 if ($customerId !== '' && Customer::where('customer_id', $customerId)->exists()) {
@@ -729,11 +857,11 @@ class CustomerController extends Controller
 
                 // ── Duplicate Check 2: same customer_name in same branch ───────
                 $existsByName = Customer::whereRaw('LOWER(TRIM(customer_name)) = ?', [strtolower($customerName)])
-                    ->where('branch_id', $branchId)
+                    ->where('branch_id', $rowBranchId)
                     ->exists();
                 if ($existsByName) {
                     $duplicateCount++;
-                    $errors[] = "Row {$rowCount}: Customer '{$customerName}' already exists — skipped.";
+                    $errors[] = "Row {$rowCount}: Customer '{$customerName}' already exists in target branch — skipped.";
                     continue;
                 }
 
@@ -741,11 +869,11 @@ class CustomerController extends Controller
                 $mobileVal = trim($val('mobile'));
                 if ($mobileVal !== '') {
                     $existsByMobile = Customer::where('mobile', $mobileVal)
-                        ->where('branch_id', $branchId)
+                        ->where('branch_id', $rowBranchId)
                         ->exists();
                     if ($existsByMobile) {
                         $duplicateCount++;
-                        $errors[] = "Row {$rowCount}: Mobile '{$mobileVal}' already registered to another customer — skipped.";
+                        $errors[] = "Row {$rowCount}: Mobile '{$mobileVal}' already registered to another customer in target branch — skipped.";
                         continue;
                     }
                 }
@@ -771,28 +899,76 @@ class CustomerController extends Controller
                 $opening = (float)$val('opening_balance', 0);
                 $customerType = trim($val('customer_type', 'Main Customer')) ?: 'Main Customer';
 
+                $partyType = 'Customer';
+                $lowerType = strtolower($customerType);
+                if (str_contains($lowerType, 'vendor') || str_contains($lowerType, 'both')) {
+                    $partyType = 'Vendor/Customer';
+                }
+
                 $customer = Customer::create([
-                    'customer_id'     => $customerId,
-                    'customer_name'   => $customerName,
-                    'customer_type'   => $customerType,
-                    'cnic'            => $val('cnic') ?: null,
-                    'mobile'          => $val('mobile') ?: null,
-                    'email_address'   => $val('email_address') ?: null,
-                    'contact_person'  => $val('contact_person') ?: null,
-                    'zone'            => $val('zone') ?: null,
-                    'address'         => $val('address') ?: null,
-                    'city'            => $val('city') ?: null,
-                    'filer_type'      => $val('filer_type', 'Non-Filer') ?: 'Non-Filer',
-                    'ntn_no'          => $val('ntn_no') ?: null,
-                    'gst_no'          => $val('gst_no') ?: null,
-                    'dsl_no'          => $val('dsl_no') ?: null,
-                    'drap_no'         => $val('drap_no') ?: null,
-                    'opening_balance' => $opening,
-                    'credit_terms'    => $val('credit_terms') ?: null,
-                    'status'          => 'active',
-                    'is_active'       => 1,
-                    'branch_id'       => $branchId,
+                    'customer_id'      => $customerId,
+                    'customer_name'    => $customerName,
+                    'customer_type'    => $customerType,
+                    'cnic'             => $val('cnic') ?: null,
+                    'mobile'           => $val('mobile') ?: null,
+                    'email_address'    => $val('email_address') ?: null,
+                    'contact_person'   => $val('contact_person') ?: null,
+                    'zone'             => $val('zone') ?: null,
+                    'address'          => $val('address') ?: null,
+                    'city'             => $val('city') ?: null,
+                    'filer_type'       => $val('filer_type', 'Non-Filer') ?: 'Non-Filer',
+                    'ntn_no'           => $val('ntn_no') ?: null,
+                    'gst_no'           => $val('gst_no') ?: null,
+                    'dsl_no'           => $val('dsl_no') ?: null,
+                    'drap_no'          => $val('drap_no') ?: null,
+                    'opening_balance'  => $opening,
+                    'credit_terms'     => $val('credit_terms') ?: null,
+                    'balance_range'    => $creditLimit,
+                    'sales_officer_id' => $salesOfficerId,
+                    'status'           => 'active',
+                    'is_active'        => 1,
+                    'branch_id'        => $rowBranchId,
+                    'party_type'       => $partyType,
                 ]);
+
+                // Sync to Vendor if dual type
+                if ($partyType === 'Vendor/Customer') {
+                    $vendorUpdateData = [
+                        'name'            => $customerName,
+                        'cnic'            => $val('cnic') ?: null,
+                        'address'         => $val('address') ?: null,
+                        'phone'           => $val('mobile') ?: null,
+                        'email'           => $val('email_address') ?: null,
+                        'party_type'      => 'Vendor/Customer',
+                        'branch_id'       => $rowBranchId,
+                        'is_active'       => 1,
+                        'city'            => $val('city') ?: null,
+                        'country'         => 'Pakistan',
+                        'ntn_no'          => $val('ntn_no') ?: null,
+                        'gst_no'          => $val('gst_no') ?: null,
+                        'dsl_no'          => $val('dsl_no') ?: null,
+                        'drap_no'         => $val('drap_no') ?: null,
+                        'opening_balance' => 0,
+                        'contact_person'  => $val('contact_person') ?: null,
+                    ];
+
+                    $vendor = \App\Models\Vendor::where('vendor_code', $customerId)->first();
+                    if ($vendor) {
+                        $vendor->update($vendorUpdateData);
+                    } else {
+                        $vendor = \App\Models\Vendor::create(array_merge($vendorUpdateData, ['vendor_code' => $customerId]));
+                        \App\Models\VendorLedger::create([
+                            'vendor_id'        => $vendor->id,
+                            'branch_id'        => $vendor->branch_id,
+                            'admin_or_user_id' => $userId,
+                            'opening_balance'  => 0,
+                            'closing_balance'  => 0,
+                            'previous_balance' => 0,
+                        ]);
+                    }
+                }
+
+
 
                 // Create initial ledger & journal entry if opening balance > 0
                 if ($opening > 0) {

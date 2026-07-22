@@ -191,6 +191,9 @@
                     <a href="{{ url('vendors-ledger') }}" class="btn btn-outline-secondary fw-bold" style="border-radius:10px;">
                         <i class="fa fa-list-alt me-2"></i> Ledger
                     </a>
+                    <button type="button" id="openImportVendorModal" class="btn btn-outline-success fw-bold" style="border-radius:10px;">
+                        <i class="fa fa-file-import me-2"></i> Import
+                    </button>
                     <a href="{{ route('parties.create', ['type' => 'Vendor']) }}" class="btn btn-primary fw-bold" style="border-radius:10px; padding: 10px 20px;">
                         <i class="fa fa-plus-circle me-2"></i> Add Vendor
                     </a>
@@ -343,4 +346,232 @@
             </div>
         </div>
     </div>
+
+    <!-- Import Vendor Modal -->
+    <div class="modal fade" id="importVendorModal" tabindex="-1" role="dialog" aria-labelledby="importVendorModalLabel" aria-hidden="true" style="z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 600px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header bg-success text-white px-4 py-3 border-0">
+                    <h5 class="modal-title fw-bold" id="importVendorModalLabel"><i class="fa fa-file-excel me-2"></i> Bulk Import Vendors</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close" style="background: none; border: none; font-size: 1.5rem; color: white; line-height: 1;">&times;</button>
+                </div>
+                
+                <form id="vendorImportForm" action="{{ route('vendors.import') }}" method="POST" enctype="multipart/form-data" onsubmit="return false;">
+                    @csrf
+                    <div class="modal-body p-4">
+                        <!-- Step 1: Download Template -->
+                        <div class="p-3 mb-4 rounded-3 border" style="background: #f0fdf4; border-color: #bbf7d0 !important;">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <h6 class="fw-bold text-success mb-1"><i class="fa fa-info-circle me-1"></i> Step 1: Download Standard Template</h6>
+                                    <p class="small text-muted mb-0">Use our pre-formatted Excel template for maximum compatibility.</p>
+                                </div>
+                                <a href="{{ route('vendors.download-template') }}" class="btn btn-success btn-sm fw-bold shadow-sm" style="border-radius: 8px;">
+                                    <i class="fa fa-download me-1"></i> Download Template (.xlsx)
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Auto-Fill Dummy Data Toggle Switch -->
+                        <div class="form-check form-switch p-3 mb-4 rounded-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                            <div class="d-flex align-items-center gap-2">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" id="vendor_auto_fill_dummy" name="auto_fill_dummy" value="1" style="width: 2.5em; height: 1.25em; cursor: pointer;">
+                                <label class="form-check-label fw-bold text-dark mb-0" for="vendor_auto_fill_dummy" style="cursor: pointer;">
+                                    Auto-Fill missing Vendor Name & required fields with editable dummy data
+                                </label>
+                            </div>
+                            <p class="small text-muted mt-1 mb-0 ms-5">
+                                When enabled, rows missing required vendor names will automatically be populated with editable dummy names like <code>[DUMMY] Vendor Row 1</code> so the import completes without errors.
+                            </p>
+                        </div>
+
+                        <!-- Step 2: Upload File -->
+                        <div class="mb-3">
+                            <label for="vendor_import_file" class="form-label fw-bold text-dark">
+                                Step 2: Upload Excel / CSV File <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" class="form-control form-control-lg" id="vendor_import_file" name="file" accept=".csv, .xlsx, .xls" required style="border-radius: 10px;">
+                            <small class="text-muted mt-1 d-block">Supported file formats: <strong>.xlsx, .xls, .csv</strong></small>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light px-4 py-3">
+                        <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                        <button type="button" class="btn btn-success fw-bold px-4 shadow-sm" id="btnVendorImportSubmit" onclick="doVendorImport()" style="border-radius: 8px;">
+                            <i class="fa fa-file-import me-1"></i> Import Vendors
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        window.addEventListener('load', function () {
+            var openBtn = document.getElementById('openImportVendorModal');
+            if (openBtn) {
+                openBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        $('#importVendorModal').modal('show');
+                    } catch(err) {
+                        if (typeof bootstrap !== 'undefined') {
+                            new bootstrap.Modal(document.getElementById('importVendorModal')).show();
+                        }
+                    }
+                });
+            }
+        });
+
+        function doVendorImport() {
+            var form = document.getElementById('vendorImportForm');
+            var fileInput = document.getElementById('vendor_import_file');
+
+            if (!fileInput || !fileInput.files.length) {
+                Swal.fire({ icon: 'warning', title: 'No File Selected', text: 'Please select a CSV or Excel file first.', confirmButtonColor: '#f59e0b' });
+                return;
+            }
+
+            var btn = document.getElementById('btnVendorImportSubmit');
+            var origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Importing...';
+
+            var formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function (response) {
+                var status = response.status;
+                return response.text().then(function (text) {
+                    var data;
+                    try { data = JSON.parse(text); } catch (e) { data = null; }
+                    return { ok: response.ok, status: status, data: data, raw: text };
+                });
+            })
+            .then(function (result) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+
+                if (result.ok) {
+                    try {
+                        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined' && typeof bootstrap.Modal.getInstance === 'function') {
+                            var bsModal = bootstrap.Modal.getInstance(document.getElementById('importVendorModal'));
+                            if (bsModal) bsModal.hide();
+                        } else {
+                            $('#importVendorModal').modal('hide');
+                        }
+                    } catch(me) {
+                        try { $('#importVendorModal').modal('hide'); } catch(e2) {}
+                    }
+                    form.reset();
+
+                    var res       = result.data;
+                    var imported  = res.imported_count  || 0;
+                    var skipped   = res.skipped_count   || 0;
+                    var dummy     = res.dummy_count     || 0;
+                    var duplicate = res.duplicate_count || 0;
+
+                    var statsHtml =
+                        '<div style="display:flex;gap:10px;justify-content:center;margin:18px 0 10px;flex-wrap:wrap">' +
+
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1.5px solid #6ee7b7;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#059669;line-height:1">' + imported + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">✅ Imported</div>' +
+                        '</div>' +
+
+                        (duplicate > 0 ?
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#fef2f2,#fecaca);border:1.5px solid #f87171;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#dc2626;line-height:1">' + duplicate + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">⛔ Duplicates</div>' +
+                        '</div>' : '') +
+
+                        (skipped > 0 ?
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fbbf24;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#d97706;line-height:1">' + skipped + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">⏭ Skipped</div>' +
+                        '</div>' : '') +
+
+                        (dummy > 0 ?
+                        '<div style="flex:1;min-width:80px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:12px;padding:14px 10px;text-align:center">' +
+                        '<div style="font-size:2rem;font-weight:900;color:#2563eb;line-height:1">' + dummy + '</div>' +
+                        '<div style="font-size:0.72rem;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">🤖 Dummy</div>' +
+                        '</div>' : '') +
+
+                        '</div>' +
+
+                        (duplicate > 0 ?
+                        '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#b91c1c;margin-top:6px">' +
+                        '<b>⛔ Duplicates Skipped:</b> ' + duplicate + ' row(s) already exist by name, ID or phone and were not imported again.' +
+                        '</div>' : '') +
+
+                        (dummy > 0 ?
+                        '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#1d4ed8;margin-top:6px">' +
+                        '<b>ℹ️ Note:</b> ' + dummy + ' row(s) auto-filled with dummy names — edit from Vendor Directory.' +
+                        '</div>' : '') +
+
+                        (res.errors && res.errors.length ?
+                        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:0.75rem;color:#475569;margin-top:6px;max-height:100px;overflow-y:auto;text-align:left">' +
+                        '<b>Details:</b><ul style="margin:4px 0 0 12px;padding:0">' +
+                        res.errors.map(function(e){ return '<li>' + e + '</li>'; }).join('') +
+                        '</ul></div>' : '');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '<span style="font-size:1.15rem;font-weight:800;color:#065f46">✅ Import Successful!</span>',
+                        html: statsHtml,
+                        confirmButtonText: 'Great, Refresh Page!',
+                        confirmButtonColor: '#059669',
+                        customClass: { confirmButton: 'btn btn-success fw-bold px-5' }
+                    }).then(function () { location.reload(); });
+
+                } else {
+                    var errRes  = result.data;
+                    var errMsg;
+
+                    if (errRes && errRes.message) {
+                        errMsg = errRes.message;
+                        if (errRes.errors && Array.isArray(errRes.errors) && errRes.errors.length) {
+                            errMsg += '<br><div class="text-start mt-2 p-2 bg-light rounded text-danger small" style="max-height:150px;overflow-y:auto"><ul>' +
+                                errRes.errors.map(function (e) { return '<li>' + e + '</li>'; }).join('') +
+                                '</ul></div>';
+                        }
+                    } else {
+                        var snippet = (result.raw || '').replace(/<[^>]+>/g, '').trim().substring(0, 300);
+                        errMsg = 'Server returned HTTP ' + result.status + '.<br><small class="text-muted">' + (snippet || 'No details available.') + '</small>';
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Import Failed (HTTP ' + result.status + ')',
+                        html: errMsg,
+                        showCancelButton: true,
+                        confirmButtonText: '⚡ Auto-Fill Dummy & Retry',
+                        cancelButtonText: 'Close',
+                        confirmButtonColor: '#d97706',
+                        customClass: {
+                            confirmButton: 'btn btn-warning fw-bold text-dark px-3',
+                            cancelButton:  'btn btn-secondary px-3'
+                        }
+                    }).then(function (r) {
+                        if (r.isConfirmed) {
+                            document.getElementById('vendor_auto_fill_dummy').checked = true;
+                            doVendorImport();
+                        }
+                    });
+                }
+            })
+            .catch(function (err) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                Swal.fire({ icon: 'error', title: 'Connection Error', html: 'Could not reach server.<br><small class="text-muted">' + (err.message || '') + '</small>', confirmButtonColor: '#ef4444' });
+            });
+        }
+    </script>
 @endsection
+

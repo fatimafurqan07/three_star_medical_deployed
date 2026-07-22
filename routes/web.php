@@ -171,6 +171,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/customer/unpaid-sales', [CustomerController::class, 'getUnpaidSales'])->name('customer.unpaid.sales');
 
     // Vendor Routes
+    Route::get('/vendor-list/download-template', [VendorController::class, 'downloadTemplate'])->middleware('permission:vendors.view')->name('vendors.download-template');
+    Route::post('/vendor-list/import', [VendorController::class, 'importVendors'])->middleware('permission:vendors.create')->name('vendors.import');
     Route::get('/vendor-list', [VendorController::class, 'index'])->middleware('permission:vendors.view')->name('vendors.index');
     Route::post('/vendor-list/store', [VendorController::class, 'store'])->name('vendors.store.ajax')->middleware('permission:vendors.create|vendors.edit');
     Route::get('/vendor-list/delete/{id}', [VendorController::class, 'delete'])->middleware('permission:vendors.delete')->name('vendors.delete');

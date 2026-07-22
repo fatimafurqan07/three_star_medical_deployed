@@ -461,7 +461,10 @@
         });
 
         // ─── AJAX Import (plain JS, no jQuery dependency) ─────────────────────
-        function doCustomerImport() {
+        var isBranchConfirmed = false;
+        var isDummyConfirmed = false;
+
+        function doCustomerImport(isRetry) {
             var form = document.getElementById('customerImportForm');
             var fileInput = document.getElementById('customer_import_file');
 
@@ -470,12 +473,25 @@
                 return;
             }
 
+            if (!isRetry) {
+                isBranchConfirmed = false;
+                isDummyConfirmed = false;
+            }
+
             var btn = document.getElementById('btnCustomerImportSubmit');
             var origHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Importing...';
 
             var formData = new FormData(form);
+
+            // Append confirmation states directly to the FormData object
+            if (isBranchConfirmed) {
+                formData.append('create_missing_branches', '1');
+            }
+            if (isDummyConfirmed || document.getElementById('customer_auto_fill_dummy').checked) {
+                formData.append('auto_fill_dummy', '1');
+            }
 
             fetch(form.action, {
                 method: 'POST',
@@ -494,6 +510,34 @@
                 btn.disabled = false;
                 btn.innerHTML = origHtml;
 
+                // Handle missing branches confirmation
+                if (result.ok && result.data && result.data.status === 'confirm_branch') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'New Branch(es) Detected',
+                        html: 'The following target branch(es) do not exist in the database:<br>' +
+                              '<div class="text-danger mt-2 fw-bold" style="font-size:1.1rem;background:#fef2f2;border:1px solid #fecaca;padding:8px;border-radius:8px;">' + result.data.missing_branches.join(', ') + '</div><br>' +
+                              'Would you like to automatically create these branch(es) and import all customers?',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Create & Import',
+                        cancelButtonText: 'No, Cancel',
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        customClass: {
+                            confirmButton: 'btn btn-success fw-bold px-3 me-2',
+                            cancelButton: 'btn btn-secondary px-3'
+                        }
+                    }).then(function (r) {
+                        if (r.isConfirmed) {
+                            isBranchConfirmed = true;
+                            doCustomerImport(true);
+                        } else {
+                            isBranchConfirmed = false;
+                        }
+                    });
+                    return;
+                }
+
                 if (result.ok) {
                     // ── Close modal (Bootstrap 4 = jQuery, Bootstrap 5 = bootstrap.Modal) ──
                     try {
@@ -509,6 +553,8 @@
                         try { $('#importCustomerModal').modal('hide'); } catch(e2) {}
                     }
                     form.reset();
+                    isBranchConfirmed = false;
+                    isDummyConfirmed = false;
 
                     var res       = result.data;
                     var imported  = res.imported_count  || 0;
@@ -588,24 +634,35 @@
                         errMsg = 'Server returned HTTP ' + result.status + '.<br><small class="text-muted">' + (snippet || 'No details available.') + '</small>';
                     }
 
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Import Failed (HTTP ' + result.status + ')',
-                        html: errMsg,
-                        showCancelButton: true,
-                        confirmButtonText: '⚡ Auto-Fill Dummy & Retry',
-                        cancelButtonText: 'Close',
-                        confirmButtonColor: '#d97706',
-                        customClass: {
-                            confirmButton: 'btn btn-warning fw-bold text-dark px-3',
-                            cancelButton:  'btn btn-secondary px-3'
-                        }
-                    }).then(function (r) {
-                        if (r.isConfirmed) {
-                            document.getElementById('customer_auto_fill_dummy').checked = true;
-                            doCustomerImport();
-                        }
-                    });
+                    if (result.data && result.data.can_auto_fill) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Import Validation Errors',
+                            html: errMsg,
+                            showCancelButton: true,
+                            confirmButtonText: '⚡ Auto-Fill Dummy & Retry',
+                            cancelButtonText: 'Close',
+                            confirmButtonColor: '#d97706',
+                            customClass: {
+                                confirmButton: 'btn btn-warning fw-bold text-dark px-3',
+                                cancelButton:  'btn btn-secondary px-3'
+                            }
+                        }).then(function (r) {
+                            if (r.isConfirmed) {
+                                isDummyConfirmed = true;
+                                doCustomerImport(true);
+                            } else {
+                                isDummyConfirmed = false;
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Import Failed (HTTP ' + result.status + ')',
+                            html: errMsg,
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
                 }
             })
             .catch(function (err) {

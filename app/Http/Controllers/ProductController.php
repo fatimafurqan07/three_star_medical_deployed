@@ -338,21 +338,43 @@ class ProductController extends Controller
     }
 
     // ===== List page =====
-    public function product()
+    public function product(Request $request)
     {
-        $products = Product::with([
+        $search = trim((string)$request->input('search'));
+
+        $query = Product::with([
             'category_relation',
             'sub_category_relation',
             'unit',
             'brand',
             'packings',
-        ])
-            ->latest()
-            ->paginate(10);
+        ]);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('item_name', 'LIKE', '%' . $search . '%')
+                  ->orWhere('item_code', 'LIKE', '%' . $search . '%')
+                  ->orWhereHas('category_relation', function ($cat) use ($search) {
+                      $cat->where('name', 'LIKE', '%' . $search . '%');
+                  })
+                  ->orWhereHas('sub_category_relation', function ($sub) use ($search) {
+                      $sub->where('name', 'LIKE', '%' . $search . '%');
+                  })
+                  ->orWhereHas('brand', function ($b) use ($search) {
+                      $b->where('name', 'LIKE', '%' . $search . '%');
+                  });
+            });
+        }
+
+        $products = $query->latest()->paginate(10);
+
+        if ($search !== '') {
+            $products->appends(['search' => $search]);
+        }
 
         $categories = Category::get();
 
-        return view('admin_panel.product.index', compact('products', 'categories'));
+        return view('admin_panel.product.index', compact('products', 'categories', 'search'));
     }
 
     public function productview($id)
@@ -1073,6 +1095,7 @@ class ProductController extends Controller
             $dummyCount    = 0;
             $duplicateCount = 0;
             $errors        = [];
+            $validationErrors = [];
 
             $autoFillDummy = $request->boolean('auto_fill_dummy') || $request->input('auto_fill_dummy') == '1';
 
@@ -1099,7 +1122,7 @@ class ProductController extends Controller
                         $itemName  = "[DUMMY] Item Row {$rowCount}";
                         $usedDummy = true;
                     } else {
-                        $errors[] = "Row {$rowCount}: Product Name is empty — row skipped.";
+                        $validationErrors[] = "Row {$rowCount}: Product Name is empty.";
                         continue;
                     }
                 }
@@ -1109,7 +1132,7 @@ class ProductController extends Controller
                         $categoryName = "Unspecified Category (Dummy)";
                         $usedDummy    = true;
                     } else {
-                        $errors[] = "Row {$rowCount}: Category is empty for '{$itemName}' — row skipped.";
+                        $validationErrors[] = "Row {$rowCount}: Category is empty for '{$itemName}'.";
                         continue;
                     }
                 }
@@ -1119,7 +1142,7 @@ class ProductController extends Controller
                         $brandName = "Unspecified Brand (Dummy)";
                         $usedDummy = true;
                     } else {
-                        $errors[] = "Row {$rowCount}: Brand is empty for '{$itemName}' — row skipped.";
+                        $validationErrors[] = "Row {$rowCount}: Brand is empty for '{$itemName}'.";
                         continue;
                     }
                 }
@@ -1290,6 +1313,20 @@ class ProductController extends Controller
                 }
 
                 $importedCount++;
+            }
+
+            // ── Abort if any validation errors (missing name, category, brand) ──
+            if (!empty($validationErrors)) {
+                DB::rollBack();
+                $shown = array_slice($validationErrors, 0, 10);
+                $more  = count($validationErrors) > 10 ? '<br>... and ' . (count($validationErrors) - 10) . ' more errors.' : '';
+                return response()->json([
+                    'status'        => 'error',
+                    'type'          => 'format_error',
+                    'can_auto_fill' => true,
+                    'message'       => 'Import aborted. Fix the following errors and re-upload:<br>'
+                                       . implode('<br>', $shown) . $more,
+                ], 400);
             }
 
             // ── Commit all valid rows ─────────────────────────────────────────
