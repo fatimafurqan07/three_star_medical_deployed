@@ -79,16 +79,25 @@ class SaleController extends Controller
             ->get();
 
         $dcNotesRaw = \App\Models\DeliveryNote::with(['sale', 'customer', 'items.product', 'items.saleItem', 'items.uom'])
-            ->whereHas('sale', function($q) {
-                $q->where('sale_status', 'delivered');
+            ->where(function($query) {
+                $query->whereHas('sale', function($q) {
+                    $q->whereIn('sale_status', ['delivered', 'in_delivery']);
+                })
+                ->orWhere(function($q) {
+                    $q->where('delivery_type', 'advance')
+                      ->whereNull('sale_id');
+                });
             })
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
             ->get();
 
-        $dcNotes = $dcNotesRaw->groupBy('sale_id')->map(function($group) {
+        $dcNotes = collect();
+        
+        // Group DCs that have a sale_id (Standard flow)
+        $standardGroups = $dcNotesRaw->whereNotNull('sale_id')->groupBy('sale_id');
+        foreach ($standardGroups as $saleId => $group) {
             $firstDc = $group->first();
-            
             $virtualDc = new \stdClass();
             $virtualDc->id = $firstDc->id;
             $virtualDc->dc_no = $group->pluck('dc_no')->implode(', ');
@@ -104,9 +113,28 @@ class SaleController extends Controller
             }
             $virtualDc->items = $allItems;
             $virtualDc->net_amount = $group->sum('net_amount');
+            $virtualDc->is_advance = false;
             
-            return $virtualDc;
-        })->values();
+            $dcNotes->push($virtualDc);
+        }
+
+        // Add Advance DCs individually
+        $advanceDcs = $dcNotesRaw->where('delivery_type', 'advance')->whereNull('sale_id');
+        foreach ($advanceDcs as $dc) {
+            $virtualDc = new \stdClass();
+            $virtualDc->id = $dc->id;
+            $virtualDc->dc_no = $dc->dc_no;
+            $virtualDc->delivery_date = $dc->delivery_date;
+            $virtualDc->customer_id = $dc->customer_id;
+            $virtualDc->sale_id = null;
+            $virtualDc->sale = null;
+            $virtualDc->customer = $dc->customer;
+            $virtualDc->items = $dc->items;
+            $virtualDc->net_amount = $dc->net_amount;
+            $virtualDc->is_advance = true;
+            
+            $dcNotes->push($virtualDc);
+        }
 
         return view('admin_panel.sale.sale_receipt_note.create', compact('Warehouse', 'Customer', 'nextInvoice', 'accounts', 'employees', 'sales', 'dcNotes'));
     }
@@ -1009,6 +1037,26 @@ class SaleController extends Controller
             $transactionService = app(\App\Services\TransactionService::class);
             $transactionService->reverseSaleAccounting($sale);
 
+            // Revert Stock for Direct Sale (SIN)
+            if ($sale->mode === 'sin') {
+                $this->handleStockImpact($sale, 'in');
+
+                // Revert batch stock
+                foreach ($sale->items as $item) {
+                    $batchDeductions = DB::table('sale_item_batches')->where('sale_item_id', $item->id)->get();
+                    foreach ($batchDeductions as $bd) {
+                        $batch = \App\Models\ProductBatch::find($bd->product_batch_id);
+                        if ($batch) {
+                            $batch->qty_remaining += $bd->qty_deducted;
+                            if ($batch->qty_remaining > 0 && $batch->status === 'consumed') {
+                                $batch->status = ($batch->exp_date && \Carbon\Carbon::parse($batch->exp_date)->lt(now())) ? 'expired' : 'active';
+                            }
+                            $batch->save();
+                        }
+                    }
+                }
+            }
+
             // 3. Update Status
             $sale->update(['sale_status' => 'un-post']);
 
@@ -1112,6 +1160,7 @@ class SaleController extends Controller
             $sale->sale_status = $status;
             $sale->enable_hs_code = $request->enable_hs_code ? 1 : 0;
             $sale->branch_id   = $this->getBranchId();
+            $sale->mode        = $request->mode ?? 'sin';
             if ($isNew) {
                 $sale->created_by = auth()->id() ?? 1;
             }
@@ -1146,7 +1195,7 @@ class SaleController extends Controller
                     $sale->invoice_no = $manualInvoice;
                 } else {
                     // Auto-generate unique invoice number
-                    $prefix = $request->mode == 'so' ? 'SO-' : 'SRN-';
+                    $prefix = $request->mode == 'so' ? 'SO-' : ($request->mode == 'sin' ? 'SIN-' : 'SRN-');
                     $sale->invoice_no = $this->generateUniqueInvoiceNo($prefix);
                 }
             }
@@ -1163,32 +1212,30 @@ class SaleController extends Controller
             // 3. Process Items
             // Delete old items if updating
             if (! $isNew) {
-                // USER REQ: SRN don't touch stock or batches. DC handles it.
-                // Restore logic also disabled as SRN doesn't deduct anymore.
-                /*
-                // Restore batch stock before deleting the old items and their batch deduction records
-                $oldItems = SaleItem::where('sale_id', $sale->id)->get();
-                foreach ($oldItems as $oldItem) {
-                    $deductions = DB::table('sale_item_batches')->where('sale_item_id', $oldItem->id)->get();
-                    foreach ($deductions as $d) {
-                        $batch = \App\Models\ProductBatch::where('id', $d->product_batch_id)->lockForUpdate()->first();
-                        if ($batch) {
-                            $batch->qty_remaining += $d->qty_deducted;
-                            // Check if it should be reactivated
-                            if ($batch->qty_remaining > 0 && $batch->status === 'consumed') {
-                                // Only reactivate if not expired
-                                if ($batch->exp_date >= now()->toDateString()) {
-                                    $batch->status = 'active';
-                                } else {
-                                    $batch->status = 'expired';
+                // If this is a direct sale (SIN) and was previously posted, restore warehouse & batch stocks before deleting
+                if ($sale->mode == 'sin' && $sale->sale_status == 'post') {
+                    $this->handleStockImpact($sale, 'in');
+
+                    // Restore batch stocks
+                    foreach ($sale->items as $item) {
+                        $deductions = DB::table('sale_item_batches')->where('sale_item_id', $item->id)->get();
+                        foreach ($deductions as $d) {
+                            $batch = \App\Models\ProductBatch::where('id', $d->product_batch_id)->lockForUpdate()->first();
+                            if ($batch) {
+                                $batch->qty_remaining += $d->qty_deducted;
+                                if ($batch->qty_remaining > 0 && $batch->status === 'consumed') {
+                                    $batch->status = ($batch->exp_date && \Carbon\Carbon::parse($batch->exp_date)->lt(now())) ? 'expired' : 'active';
                                 }
+                                $batch->save();
                             }
-                            $batch->save();
                         }
                     }
-                    DB::table('sale_item_batches')->where('sale_item_id', $oldItem->id)->delete();
                 }
-                */
+
+                // Delete old batch connections
+                foreach ($sale->items as $item) {
+                    DB::table('sale_item_batches')->where('sale_item_id', $item->id)->delete();
+                }
 
                 SaleItem::where('sale_id', $sale->id)->delete();
             }
@@ -1328,29 +1375,65 @@ class SaleController extends Controller
 
                 $saleItem->save();
 
-                // Link Batches (Lot/Expiry tracking)
+                // Link Batches (Lot/Expiry tracking) and deduct if direct sale (SIN)
                 $batchId = isset($request->batch_id[$index]) ? $request->batch_id[$index] : null;
-                if ($batchId) {
-                    DB::table('sale_item_batches')->insert([
-                        'sale_item_id' => $saleItem->id,
-                        'product_batch_id' => $batchId,
-                        'qty_deducted' => $totalPieces,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                } else {
-                    // Auto-link the first available batch if not explicitly selected
-                    $firstBatch = \App\Models\ProductBatch::where('product_id', $pid)
-                        ->orderBy('exp_date', 'asc')
+                if ($request->filled('dc_id')) {
+                    $dcId = (int)$request->dc_id;
+                    $dcItem = \App\Models\DeliveryNoteItem::where('dc_note_id', $dcId)
+                        ->where('product_id', $pid)
+                        ->whereNull('sale_item_id')
                         ->first();
-                    if ($firstBatch) {
+                    if ($dcItem) {
+                        $dcItem->update(['sale_item_id' => $saleItem->id]);
+                        
+                        // Update delivered_qty on SaleItem to match delivered pcs
+                        $saleItem->update(['delivered_qty' => $totalPieces]);
+                        
+                        // Link the batch deductions to this SaleItem
+                        DB::table('sale_item_batches')
+                            ->where('delivery_note_item_id', $dcItem->id)
+                            ->update(['sale_item_id' => $saleItem->id]);
+                    }
+                } elseif ($request->mode == 'sin' && $status === 'post') {
+                    $deductions = \App\Http\Controllers\ProductBatchController::deductFromBatches(
+                        $pid,
+                        $totalPieces,
+                        $saleItem->warehouse_id,
+                        $batchId,
+                        $sale->branch_id
+                    );
+                    foreach ($deductions as $d) {
                         DB::table('sale_item_batches')->insert([
                             'sale_item_id' => $saleItem->id,
-                            'product_batch_id' => $firstBatch->id,
+                            'product_batch_id' => $d['batch_id'],
+                            'qty_deducted' => $d['qty'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                } else {
+                    if ($batchId) {
+                        DB::table('sale_item_batches')->insert([
+                            'sale_item_id' => $saleItem->id,
+                            'product_batch_id' => $batchId,
                             'qty_deducted' => $totalPieces,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
+                    } else {
+                        // Auto-link the first available batch if not explicitly selected
+                        $firstBatch = \App\Models\ProductBatch::where('product_id', $pid)
+                            ->orderBy('exp_date', 'asc')
+                            ->first();
+                        if ($firstBatch) {
+                            DB::table('sale_item_batches')->insert([
+                                'sale_item_id' => $saleItem->id,
+                                'product_batch_id' => $firstBatch->id,
+                                'qty_deducted' => $totalPieces,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
                     }
                 }
 
@@ -1415,7 +1498,9 @@ class SaleController extends Controller
                 \Log::info('Proceeding to Auto-Receipt & Ledger logic for Sale #'.$sale->invoice_no);
 
                 // 1. DEDUCT STOCK FROM WAREHOUSE
-                // $this->handleStockImpact($sale, 'out'); // USER REQ: SRN does not deduct stock. Handled in DC Note.
+                if ($sale->mode == 'sin' && !$request->filled('dc_id')) {
+                    $this->handleStockImpact($sale, 'out');
+                }
 
                 // 2. LEGACY LEDGER: Post Invoice First (Increases Balance)
                 // This ensures the CustomerLedger has the Debit entry before we potentially Credit it with a receipt.
@@ -1464,10 +1549,17 @@ class SaleController extends Controller
                         $request->input('payment_account_id', []),
                         $request->input('payment_amount', [])
                     );
-
                 } catch (\Exception $e) {
                     \Log::error('Professional Ledger Posting Error: '.$e->getMessage());
                 }
+            }
+
+            // If created from an Advance DC, link the Delivery Note
+            if ($request->filled('dc_id')) {
+                $dcId = (int)$request->dc_id;
+                \App\Models\DeliveryNote::where('id', $dcId)->update([
+                    'sale_id' => $sale->id
+                ]);
             }
 
             // If AJAX/JSON response needed

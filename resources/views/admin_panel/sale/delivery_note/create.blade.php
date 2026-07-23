@@ -450,20 +450,23 @@
                                 </div>
                             </div>
                             <div class="row g-2 mt-2">
-                                <div class="col-md-6">
+                                <div class="col-md-5">
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="note" class="form-control form-control-sm" placeholder="Delivery notes...">
                                 </div>
-                                <div class="col-md-3 d-flex align-items-end">
-                                    <div class="form-check form-switch mb-1">
-                                        <input class="form-check-input" type="checkbox" id="enable_hs_code" name="enable_hs_code" value="1" checked>
-                                        <label class="form-check-label fw-bold small" for="enable_hs_code">HS CODE</label>
-                                    </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary small">Delivery Type</label>
+                                    <select name="delivery_type" id="deliveryType" class="form-select form-select-sm fw-semibold text-primary" style="border-color: #4f46e5; background-color: #fafbff; padding-right: 1.8rem;">
+                                        <option value="standard">Standard (From Sale Order)</option>
+                                        <option value="advance">Advance DC (Bill Later)</option>
+                                        <option value="donation">Donation / Sample (Free)</option>
+                                    </select>
+                                    <input type="hidden" name="is_sample" id="isSample" value="0">
                                 </div>
                                 <div class="col-md-3 d-flex align-items-end">
-                                    <div class="form-check mb-1">
-                                        <input class="form-check-input" type="checkbox" name="is_sample" id="isSample" value="1">
-                                        <label class="form-check-label fw-bold text-primary small" for="isSample">SAMPLE</label>
+                                    <div class="form-check form-switch mb-2" style="margin-left: 2.5rem !important;">
+                                        <input class="form-check-input" type="checkbox" id="enable_hs_code" name="enable_hs_code" value="1" checked>
+                                        <label class="form-check-label font-weight-bold small" for="enable_hs_code">HS CODE</label>
                                     </div>
                                 </div>
                             </div>
@@ -690,32 +693,38 @@
             recalcRow($row.attr('id').replace('item-row-', ''));
         }
 
-        // ── Sample Mode Toggle ──
-        document.getElementById('isSample').addEventListener('change', function() {
-            const isSample = this.checked;
-            updateDcNo(isSample ? null : document.getElementById('saleId').value);
+        // ── Delivery Type Mode Toggle ──
+        document.getElementById('deliveryType').addEventListener('change', function() {
+            const type = this.value;
+            const isManual = (type === 'advance' || type === 'donation');
+            const isSample = (type === 'donation');
+
+            // Sync is_sample hidden input
+            document.getElementById('isSample').value = isSample ? '1' : '0';
+
+            updateDcNo(isManual ? null : document.getElementById('saleId').value);
             
-            document.getElementById('customerSoWrapper').classList.toggle('d-none', isSample);
-            document.getElementById('customerManualWrapper').classList.toggle('d-none', !isSample);
-            document.getElementById('soActionWrapper').classList.toggle('d-none', isSample);
-            document.getElementById('manualActionWrapper').classList.toggle('d-none', !isSample);
+            document.getElementById('customerSoWrapper').classList.toggle('d-none', isManual);
+            document.getElementById('customerManualWrapper').classList.toggle('d-none', !isManual);
+            document.getElementById('soActionWrapper').classList.toggle('d-none', isManual);
+            document.getElementById('manualActionWrapper').classList.toggle('d-none', !isManual);
             
             document.getElementById('dcItemsBody').innerHTML = `
                 <tr class="empty-row" id="emptyRow">
                     <td colspan="10">
                         <i class="fas fa-file-import mb-2" style="font-size:2rem; color:#cbd5e1;"></i><br>
-                        ${isSample ? 'Click <strong>"Add Product Row"</strong> to begin manual entry' : 'Click <strong>"Import Sale Order"</strong> to load products'}
+                        ${isManual ? 'Click <strong>"Add Product Row"</strong> to begin manual entry' : 'Click <strong>"Import Sale Order"</strong> to load products'}
                     </td>
                 </tr>
             `;
             allSoItems = [];
             document.getElementById('saleId').value = "";
             document.getElementById('customerId').value = "";
-            document.getElementById('submitBtn').disabled = !isSample;
+            document.getElementById('submitBtn').disabled = !isManual;
 
-            document.querySelectorAll('.so-col').forEach(el => el.classList.toggle('d-none', isSample));
-            document.querySelectorAll('.manual-col').forEach(el => el.classList.toggle('d-none', !isSample));
-            document.getElementById('qty-header-label').textContent = isSample ? 'Qty (Box / Loose)' : 'Deliver Qty (Pcs)';
+            document.querySelectorAll('.so-col').forEach(el => el.classList.toggle('d-none', isManual));
+            document.querySelectorAll('.manual-col').forEach(el => el.classList.toggle('d-none', !isManual));
+            document.getElementById('qty-header-label').textContent = isManual ? 'Qty (Box / Loose)' : 'Deliver Qty (Pcs)';
             recalcAll();
         });
 
@@ -1111,8 +1120,11 @@
         }
 
         // ── recalcRow ─────────────────────────────────────────────────────
+        // ── recalcRow ─────────────────────────────────────────────────────
         function recalcRow(i) {
-            const isSample = document.getElementById('isSample').checked;
+            const type = document.getElementById('deliveryType')?.value || 'standard';
+            const isSample = (type === 'donation');
+            const isManual = (type === 'advance' || type === 'donation');
             var ppb = parseInt(document.getElementById('ppb-' + i).value) || 1;
             var totalPieces = 0;
 
@@ -1124,7 +1136,7 @@
             var qtyInput = document.getElementById('qty-' + i);
             if (qtyInput) qtyInput.value = totalPieces;
 
-            if (!isSample) {
+            if (!isManual) {
                 // SO Mode: Limit check against remaining
                 var maxEl = document.getElementById('max-qty-' + i);
                 if (maxEl) {
@@ -1159,7 +1171,9 @@
             let totalStock    = 0;
             let hasPpb        = false;
             let lastPpb       = 1;
-            const isSample = document.getElementById('isSample').checked;
+            const type = document.getElementById('deliveryType')?.value || 'standard';
+            const isSample = (type === 'donation');
+            const isManual = (type === 'advance' || type === 'donation');
 
             // Iterate through all rows (SO rows use indices 0,1,2... manual use m0, m1...)
             $('.item-row').each(function() {
@@ -1167,8 +1181,8 @@
                 var i = idAttr.replace('item-row-', '');
                 
                 const chk  = document.getElementById('chk-' + i);
-                // If it's SO mode, check if row is ticked. If manual mode, all rows are active.
-                if (isSample || (chk && chk.checked)) {
+                // If it's manual mode, all rows are active. If SO mode, check if row is ticked.
+                if (isManual || (chk && chk.checked)) {
                     const ppb    = parseInt(document.getElementById('ppb-' + i)?.value) || 1;
                     const rawQty = document.getElementById('qty-'   + i)?.value || '0';
                     const pcs    = parseQtyToPieces(rawQty, ppb);
@@ -1205,17 +1219,18 @@
 
         // ── Form validation before submit ──
         document.getElementById('dcForm').addEventListener('submit', function(e) {
-            const isSample = document.getElementById('isSample').checked;
+            const type = document.getElementById('deliveryType').value;
+            const isManual = (type === 'advance' || type === 'donation');
             const saleId = document.getElementById('saleId').value;
-            console.log('Submitting DC:', { isSample, saleId });
+            console.log('Submitting DC:', { type, isManual, saleId });
             
-            if (!isSample && !saleId) {
+            if (!isManual && !saleId) {
                 e.preventDefault();
                 alert('Please import a Sale Order first.');
                 return;
             }
 
-            if (isSample) {
+            if (isManual) {
                 const customerId = document.getElementById('customerSelect').value;
                 if (!customerId) {
                     e.preventDefault();

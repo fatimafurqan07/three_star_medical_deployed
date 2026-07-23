@@ -525,6 +525,7 @@
 
             function statusBadge(s) {
                 const map = {
+                    post: '<span class="badge badge-posted">Posted</span>',
                     posted: '<span class="badge badge-posted">Posted</span>',
                     booked: '<span class="badge badge-booked">Booked</span>',
                     cancelled: '<span class="badge badge-cancelled">Cancelled</span>',

@@ -324,6 +324,9 @@ class ReportingController extends Controller
                     // Period Sale Return (Should be positive as it adds to stock)
                     DB::raw("SUM(CASE WHEN created_at BETWEEN '$startDt' AND '$endDt' AND ref_type IN ('SR', 'sale_return', 'SALE_RETURN', 'SRN') THEN abs(qty) ELSE 0 END) as sale_return"),
                     
+                    // Period Donated (Should be positive representing stock out)
+                    DB::raw("SUM(CASE WHEN created_at BETWEEN '$startDt' AND '$endDt' AND ref_type = 'donation' THEN abs(qty) WHEN created_at BETWEEN '$startDt' AND '$endDt' AND ref_type = 'donation_cancel' THEN -abs(qty) ELSE 0 END) as donated"),
+                    
                     // Adjustments (anything else in period)
                     DB::raw("SUM(CASE WHEN created_at BETWEEN '$startDt' AND '$endDt' AND ref_type IN ('INIT', 'OPENING', 'ADJ', 'adjustment') THEN qty ELSE 0 END) as adjusted")
                 );
@@ -347,7 +350,7 @@ class ReportingController extends Controller
             $sAmtMap = DB::table('sale_items')
                 ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
                 ->whereIn('sale_items.product_id', $productIds)
-                ->whereIn('sales.sale_status', ['posted', 'completed'])
+                ->whereIn('sales.sale_status', ['posted', 'post', 'completed', 'in_delivery', 'delivered'])
                 ->when($start && $end, fn($q) => $q->whereBetween(DB::raw('DATE(sales.created_at)'), [$start, $end]))
                 ->when($branchId, fn($q) => $q->where('sales.branch_id', $branchId))
                 ->selectRaw('sale_items.product_id, COALESCE(SUM(sale_items.total), 0) as total')
@@ -371,19 +374,20 @@ class ReportingController extends Controller
                 // Movement summaries for the period
                 $mv = $movementsAll->get($pid) ?: (object)[
                     'initial' => 0, 'purchased' => 0, 'pur_return' => 0, 
-                    'sold' => 0, 'sale_return' => 0, 'adjusted' => 0
+                    'sold' => 0, 'sale_return' => 0, 'donated' => 0, 'adjusted' => 0
                 ];
 
                 $initial    = (float)$mv->initial;
                 $purchased  = (float)$mv->purchased;
                 $purReturn  = (float)abs($mv->pur_return);
                 $sold       = (float)abs($mv->sold);
+                $donated    = (float)abs($mv->donated ?? 0);
                 $saleReturn = (float)$mv->sale_return;
                 $adjusted   = (float)$mv->adjusted;
 
                 // Calculated period balance: Initial + In - Out
-                // Period Balance = initial + purchased - pur_return - sold + sale_return + adjusted
-                $periodBalance = $initial + $purchased - $purReturn - $sold + $saleReturn + $adjusted;
+                // Period Balance = initial + purchased - pur_return - sold + sale_return - donated + adjusted
+                $periodBalance = $initial + $purchased - $purReturn - $sold + $saleReturn - $donated + $adjusted;
 
                 // If no date filters, period balance should match live balance (but calculation is safer for audit)
                 // Use period balance for the table columns to ensure they reconcile.
@@ -426,6 +430,7 @@ class ReportingController extends Controller
                     'purchased'                => $purchased,
                     'purchase_return_qty'      => $purReturn,
                     'sold'                     => $sold,
+                    'donated'                  => $donated,
                     'sale_return_qty'          => $saleReturn,
                     'adjusted_qty'             => $adjusted,
                     'balance'                  => $displayBalance,

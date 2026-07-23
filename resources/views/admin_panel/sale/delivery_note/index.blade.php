@@ -337,7 +337,11 @@
                                         <td class="fw-bold text-muted" style="width:50px;">{{ $dc->id }}</td>
                                         <td>
                                             <span class="fw-800 font-monospace text-dark">{{ $dc->dc_no }}</span>
-                                            @if ($dc->is_sample)
+                                            @if ($dc->delivery_type === 'advance')
+                                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">ADVANCE</span>
+                                            @elseif ($dc->delivery_type === 'donation')
+                                                <span class="badge bg-info text-white ms-1" style="font-size: 0.65rem;">DONATION</span>
+                                            @elseif ($dc->is_sample)
                                                 <span class="badge bg-info text-white ms-1" style="font-size: 0.65rem;">SAMPLE</span>
                                             @endif
                                             <br>
@@ -384,14 +388,28 @@
                                             <small class="text-muted fw-bold">PKR</small>
                                         </td>
                                         <td class="text-center">
-                                              @if ($dc->sale && in_array($dc->sale->sale_status, ['draft', 'in_delivery']))
-                                                 <span class="badge-pending"><i class="fas fa-spinner me-1"></i>Partially Delivered</span>
-                                            @elseif($dc->sale && $dc->sale->sale_status === 'delivered')
-                                                <span class="badge-delivered"><i
-                                                        class="fas fa-check me-1"></i>Delivered</span>
-                                            @else
-                                                <span class="badge-dc">{{ $dc->sale->sale_status ?? '' }}</span>
-                                            @endif
+                                              @if ($dc->status === 'cancelled')
+                                                <span class="badge bg-secondary text-white">Cancelled</span>
+                                              @elseif ($dc->delivery_type === 'advance' && !$dc->sale_id)
+                                                <span class="badge bg-danger text-white" style="font-size: 0.72rem; animation: pulse-blink 1.5s infinite; font-weight: bold;"><i class="fas fa-exclamation-triangle me-1"></i>Sale Invoice Pending!</span>
+                                                <style>
+                                                    @keyframes pulse-blink {
+                                                        0% { opacity: 1; }
+                                                        50% { opacity: 0.4; }
+                                                        100% { opacity: 1; }
+                                                    }
+                                                </style>
+                                              @elseif ($dc->delivery_type === 'advance' && $dc->sale_id)
+                                                <span class="badge bg-success text-white" style="font-size: 0.72rem; font-weight: bold;"><i class="fas fa-check-circle me-1"></i>Billed (SIN)</span>
+                                              @elseif ($dc->delivery_type === 'donation')
+                                                <span class="badge bg-secondary text-white" style="font-size: 0.72rem;">Free Donation</span>
+                                              @elseif ($dc->sale && in_array($dc->sale->sale_status, ['draft', 'in_delivery']))
+                                                  <span class="badge-pending"><i class="fas fa-spinner me-1"></i>Partially Delivered</span>
+                                              @elseif($dc->sale && $dc->sale->sale_status === 'delivered')
+                                                  <span class="badge-delivered"><i class="fas fa-check me-1"></i>Delivered</span>
+                                              @else
+                                                  <span class="badge-dc">{{ $dc->sale->sale_status ?? 'N/A' }}</span>
+                                              @endif
                                         </td>
                                         <td class="text-center">
                                             @if($dc->status === 'cancelled')

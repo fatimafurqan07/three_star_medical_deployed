@@ -5,6 +5,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
     <style>
         body {
@@ -281,11 +282,11 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-pro">MFG Date</label>
-                    <input type="date" name="mfg_date" class="form-control-pro">
+                    <input type="text" name="mfg_date" class="form-control-pro mfg-datepicker" placeholder="dd/mm/yyyy">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-pro">EXP Date <span class="text-danger">*</span></label>
-                    <input type="date" name="exp_date" class="form-control-pro exp-date-input" required>
+                    <input type="text" name="exp_date" class="form-control-pro exp-datepicker" placeholder="dd/mm/yyyy" required>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <div id="exp_badge___IDX__"
@@ -297,6 +298,8 @@
 @endsection
 
 @section('js')
+    <!-- Flatpickr Datepicker JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         let rowCount = 0;
 
@@ -308,9 +311,21 @@
 
             const row = document.querySelector(`[data-row-index="${rowCount}"]`);
 
-            // Bind EXP date change for live badge
-            row.querySelector('.exp-date-input').addEventListener('change', function() {
-                updateExpBadge(row, this.value);
+            // Initialize flatpickr on date inputs
+            flatpickr(row.querySelector('.mfg-datepicker'), {
+                altInput: true,
+                altFormat: "d/m/Y",
+                dateFormat: "Y-m-d",
+                allowInput: true
+            });
+            flatpickr(row.querySelector('.exp-datepicker'), {
+                altInput: true,
+                altFormat: "d/m/Y",
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    updateExpBadge(row, dateStr);
+                }
             });
 
             // Initialize Select2 on product dropdown

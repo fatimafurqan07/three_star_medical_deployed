@@ -77,9 +77,23 @@ class DeliveryNoteController extends Controller
     public function store(Request $request)
     {
         try {
+            $deliveryType = $request->input('delivery_type');
+            if (!$deliveryType) {
+                if ($request->has('is_sample') && $request->is_sample) {
+                    $deliveryType = 'donation';
+                } elseif ($request->filled('sale_id')) {
+                    $deliveryType = 'standard';
+                } else {
+                    $deliveryType = 'advance';
+                }
+            }
+
+            $request->merge(['delivery_type' => $deliveryType]);
+
             $request->validate([
-                'sale_id'        => 'required_without:is_sample|nullable|exists:sales,id',
-                'customer_id_manual' => 'required_if:is_sample,1|nullable|exists:customers,id',
+                'delivery_type'  => 'nullable|string|in:standard,advance,donation',
+                'sale_id'        => 'required_if:delivery_type,standard|nullable|exists:sales,id',
+                'customer_id_manual' => 'required_unless:delivery_type,standard|nullable|exists:customers,id',
                 'delivery_date'  => 'nullable|date',
                 'product_id'     => 'required|array|min:1',
                 'product_id.*'   => 'required|exists:products,id',
@@ -95,28 +109,30 @@ class DeliveryNoteController extends Controller
             ]);
 
             $branchId   = $this->getBranchId() ?? (int)($request->branch_id ?? 1);
-            $isSample   = $request->has('is_sample');
-            $sale       = !$isSample ? Sale::with('items')->findOrFail($request->sale_id) : null;
+            $isSample   = ($deliveryType === 'donation');
+            $isStandard = ($deliveryType === 'standard');
+            $sale       = $isStandard ? Sale::with('items')->findOrFail($request->sale_id) : null;
 
-            DB::transaction(function () use ($request, $sale, $branchId, $isSample) {
-                $dcNo = DeliveryNote::generateDcNo($isSample ? null : $sale->id, $branchId);
+            DB::transaction(function () use ($request, $sale, $branchId, $isSample, $deliveryType, $isStandard) {
+                $dcNo = DeliveryNote::generateDcNo($isStandard ? $sale->id : null, $branchId);
                 $subtotal = 0;
 
                 $dcNote = DeliveryNote::create([
                     'dc_no'         => $dcNo,
-                    'sale_id'       => $isSample ? null : $sale->id,
+                    'sale_id'       => $isStandard ? $sale->id : null,
                     'branch_id'     => $branchId,
-                    'customer_id'   => $isSample ? $request->customer_id_manual : $sale->customer_id,
+                    'customer_id'   => $isStandard ? $sale->customer_id : $request->customer_id_manual,
                     'delivery_date' => $request->delivery_date ?? now()->toDateString(),
                     'note'          => $request->note,
-                    'is_sample'     => $isSample,
+                    'is_sample'     => $isSample ? 1 : 0,
+                    'delivery_type' => $deliveryType,
                     'enable_hs_code'=> $request->has('enable_hs_code'),
                     'status'        => 'completed',
                     'subtotal'      => 0, 'net_amount' => 0, 'paid_amount' => 0,
                     'created_by'    => auth()->id() ?? 1,
                 ]);
 
-                if (!$isSample) $sale->update(['sale_status' => 'in_delivery']);
+                if ($isStandard) $sale->update(['sale_status' => 'in_delivery']);
 
                 $productIds    = $request->product_id    ?? [];
                 $uomIds        = $request->uom_id        ?? [];
@@ -179,16 +195,18 @@ class DeliveryNoteController extends Controller
 
                     \App\Services\StockService::debit($pid, $dcItem->uom_id, $warehouseId, $branchId, $totalPiecesToDeduct);
                     
+                    $refType = ($deliveryType === 'donation') ? 'donation' : 'dc';
+                    $movementNote = ($deliveryType === 'donation') ? 'Donation/Sample DC #' . $dcNote->dc_no : 'DC #' . $dcNote->dc_no;
                     DB::table('stock_movements')->insert([
-                        'product_id' => $pid, 'type' => 'out', 'qty' => -$totalPiecesToDeduct, 'ref_type' => 'dc',
-                        'ref_id' => $dcNote->id, 'note' => 'DC #'.$dcNote->dc_no, 'created_at' => now(), 'updated_at' => now(),
+                        'product_id' => $pid, 'type' => 'out', 'qty' => -$totalPiecesToDeduct, 'ref_type' => $refType,
+                        'ref_id' => $dcNote->id, 'note' => $movementNote, 'created_at' => now(), 'updated_at' => now(),
                     ]);
 
                     if ($saleItemId) SaleItem::where('id', $saleItemId)->increment('delivered_qty', $pieces);
                 }
 
                 $dcNote->update(['subtotal' => $subtotal, 'net_amount' => $subtotal]);
-                if (!$isSample) $this->syncSaleStatus($sale);
+                if ($isStandard && $sale) $this->syncSaleStatus($sale);
             });
 
             return redirect()->route('delivery.note.index')->with('success', 'Delivery Note created successfully.');
@@ -237,7 +255,11 @@ class DeliveryNoteController extends Controller
                 $this->revertDCItems($dcNote);
                 $dcNote->items()->delete();
 
-                $branchId = $dcNote->branch_id; $isSample = $dcNote->is_sample; $sale = $dcNote->sale;
+                $branchId = $dcNote->branch_id;
+                $deliveryType = $request->input('delivery_type', $dcNote->delivery_type);
+                $isSample = ($deliveryType === 'donation');
+                $isStandard = ($deliveryType === 'standard');
+                $sale = $isStandard ? $dcNote->sale : null;
                 $pIds = $request->product_id; $uIds = $request->uom_id; $qtys = $request->qty;
                 $prices = $request->price; $wIds = $request->warehouse_id; $bIds = $request->batch_id;
                 $siIds = $request->sale_item_id; $fQtys = $request->free_qty;
@@ -286,15 +308,20 @@ class DeliveryNoteController extends Controller
                     }
 
                     \App\Services\StockService::debit($pid, $dcItem->uom_id, (int)$wIds[$i], $branchId, $totalPcs);
+                    $refType = ($dcNote->delivery_type === 'donation') ? 'donation' : 'dc';
+                    $movementNote = ($dcNote->delivery_type === 'donation') ? 'Donation/Sample DC Update #' . $dcNote->dc_no : 'DC Update #'.$dcNote->dc_no;
                     DB::table('stock_movements')->insert([
-                        'product_id' => $pid, 'type' => 'out', 'qty' => -$totalPcs, 'ref_type' => 'dc',
-                        'ref_id' => $dcNote->id, 'note' => 'DC Update #'.$dcNote->dc_no, 'created_at' => now(), 'updated_at' => now(),
+                        'product_id' => $pid, 'type' => 'out', 'qty' => -$totalPcs, 'ref_type' => $refType,
+                        'ref_id' => $dcNote->id, 'note' => $movementNote, 'created_at' => now(), 'updated_at' => now(),
                     ]);
                     if ($siId) SaleItem::where('id', $siId)->increment('delivered_qty', $pieces);
                 }
 
                 $dcNote->update([
-                    'delivery_date' => $request->delivery_date ?? $dcNote->delivery_date, 'note' => $request->note,
+                    'delivery_date' => $request->delivery_date ?? $dcNote->delivery_date, 
+                    'note' => $request->note,
+                    'is_sample' => $isSample ? 1 : 0,
+                    'delivery_type' => $deliveryType,
                     'subtotal' => $subtotal, 'net_amount' => $subtotal,
                 ]);
                 if ($sale) $this->syncSaleStatus($sale);
@@ -330,8 +357,9 @@ class DeliveryNoteController extends Controller
             DB::table('sale_item_batches')->where('delivery_note_item_id', $item->id)->delete();
 
             \App\Services\StockService::credit($item->product_id, $item->uom_id, $item->warehouse_id, $dcNote->branch_id, $totalPcs);
+            $refType = ($dcNote->delivery_type === 'donation') ? 'donation_cancel' : 'dc_cancel';
             DB::table('stock_movements')->insert([
-                'product_id' => $item->product_id, 'type' => 'in', 'qty' => $totalPcs, 'ref_type' => 'dc_cancel',
+                'product_id' => $item->product_id, 'type' => 'in', 'qty' => $totalPcs, 'ref_type' => $refType,
                 'ref_id' => $dcNote->id, 'note' => 'Reversal of DC #'.$dcNote->dc_no, 'created_at' => now(), 'updated_at' => now(),
             ]);
             if ($item->sale_item_id) SaleItem::where('id', $item->sale_item_id)->decrement('delivered_qty', $item->total_pieces);

@@ -468,6 +468,7 @@
                     @csrf
                     <input type="hidden" name="action" id="action" value="post">
                     <input type="hidden" name="draft_id" id="draft_id_input" value="">
+                    <input type="hidden" name="dc_id" id="dc_id_input" value="">
                     <input type="hidden" name="mode" value="{{ request()->query('mode') }}">
 
                     <!-- Page Header Top -->
@@ -921,20 +922,17 @@
 
                                     <!-- Action Buttons -->
                                     <div class="d-grid gap-2 mt-4 mt-xl-5">
-                                        @if (request()->query('mode') != 'so')
-                                            <!-- Sale Mode: Only Show Confirm & Post -->
-                                            <button type="button"
-                                                class="btn-erp btn-erp-success justify-content-center shadow-lg pt-3 pb-3"
-                                                id="btnConfirm" style="font-size: 1rem;">
-                                                <i class="bi bi-check-circle-fill"></i> CONFIRM & POST SALE
-                                            </button>
-                                        @else
-                                            <!-- SO Mode: Only Show Save Sale Order (Draft) -->
-                                            <button type="button" class="btn-erp btn-erp-primary justify-content-center"
-                                                id="btnSaveOnly">
-                                                <i class="bi bi-save2"></i> Save Sale Order (Draft)
-                                            </button>
-                                        @endif
+                                        {{-- CONFIRM & POST button: visible in sin mode, hidden in so mode (JS can un-hide it) --}}
+                                        <button type="button"
+                                            class="btn-erp btn-erp-success justify-content-center shadow-lg pt-3 pb-3"
+                                            id="btnConfirm" style="font-size: 1rem; {{ request()->query('mode') == 'so' ? 'display:none;' : '' }}">
+                                            <i class="bi bi-check-circle-fill"></i> CONFIRM &amp; POST SALE
+                                        </button>
+                                        {{-- Save Draft button: visible in so mode, hidden in sin mode (JS can un-hide it) --}}
+                                        <button type="button" class="btn-erp btn-erp-primary justify-content-center"
+                                            id="btnSaveOnly" style="{{ request()->query('mode') != 'so' ? 'display:none;' : '' }}">
+                                            <i class="bi bi-save2"></i> Save Sale Order (Draft)
+                                        </button>
                                     </div>
                                     <div class="mt-3 text-center">
                                         <div class="form-check form-check-inline">
@@ -962,7 +960,7 @@
                     <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2"
                         id="bookedProductsModalLabel">
                         <i class="bi bi-card-checklist text-primary fs-4"></i>
-                        {{ request()->query('mode') == 'so' ? 'Draft Sales' : 'Import Delivery Notes' }}
+                        {{ request()->query('mode') == 'so' ? 'Import Sales / Delivery Notes' : 'Import Delivery Notes' }}
                     </h5>
                     <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -995,8 +993,10 @@
                                 @php
                                     $hasDraftItems = false;
                                     $isSoMode = request()->query('mode') == 'so';
+                                    $advanceDcNotes = $dcNotes->filter(fn($dc) => $dc->is_advance);
                                 @endphp
 
+                                {{-- Draft Sale Orders section (mode=so only) --}}
                                 @if ($isSoMode)
                                     @php
                                         $draftSales = $sales->where('sale_status', 'draft');
@@ -1032,6 +1032,7 @@
                                                 <button type="button"
                                                     class="btn btn-primary btn-sm rounded-pill px-4 btn-import-single"
                                                     title="Import Sale Order" data-customer-id="{{ $draft->customer_id }}"
+                                                    data-is-advance="0"
                                                     data-draft-id="{{ $draft->id }}"
                                                     data-warehouse-id="{{ $draft->warehouse_id }}"
                                                     data-sale-date="{{ $draft->sale_date ? substr($draft->sale_date, 0, 10) : date('Y-m-d') }}"
@@ -1067,73 +1068,85 @@
                                             </td>
                                         </tr>
                                     @endforeach
-                                @else
-                                    @foreach ($dcNotes as $dc)
-                                        @php $hasDraftItems = true; @endphp
-                                        <tr class="booked-item-row"
-                                            data-search="{{ strtolower($dc->dc_no . ' ' . ($dc->customer->customer_name ?? '')) }}">
-                                            <td>
-                                                <i class="bi bi-file-earmark-text text-primary"></i>
-                                            </td>
-                                            <td><span class="badge bg-light text-dark border">{{ $dc->dc_no }}</span>
-                                            </td>
-                                            <td>{{ \Carbon\Carbon::parse($dc->delivery_date)->format('d M, Y') }}</td>
-                                            <td>
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <div class="vendor-initial bg-primary-subtle text-primary fw-bold rounded-3 p-2"
-                                                        style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                                                        {{ strtoupper(substr($dc->customer->customer_name ?? 'C', 0, 1)) }}
-                                                    </div>
-                                                    <div class="d-flex flex-column">
-                                                        <span
-                                                            class="fw-bold text-dark">{{ $dc->customer->customer_name ?? 'N/A' }}</span>
-                                                        <span
-                                                            class="text-muted small">{{ $dc->customer->business_name ?? 'Individual' }}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="text-end fw-bold">{{ $dc->items->count() }}</td>
-                                            <td class="text-end fw-bold text-primary">
-                                                {{ number_format($dc->net_amount, 2) }}</td>
-                                            <td class="text-end">
-                                                <button type="button"
-                                                    class="btn btn-primary btn-sm rounded-pill px-4 btn-import-single"
-                                                    title="Import DC Note" data-customer-id="{{ $dc->customer_id }}"
-                                                    data-dc-id="{{ $dc->id }}"
-                                                    data-draft-id="{{ $dc->sale_id }}"
-                                                    data-warehouse-id="{{ $dc->items->first()->warehouse_id ?? '' }}"
-                                                    data-delivery-date="{{ $dc->delivery_date }}"
-                                                    data-dc-no="{{ $dc->dc_no }}"
-                                                    data-sale-order-no="{{ $dc->sale->invoice_no ?? '' }}"
-                                                    data-discount="{{ $dc->sale->discount ?? 0 }}"
-                                                    data-freight="{{ $dc->sale->freight_charges ?? 0 }}"
-                                                    data-expense="{{ $dc->sale->extra_cost ?? 0 }}"
-                                                    data-employee="{{ $dc->sale->employee_id ?? '' }}"
-                                                    data-reference="{{ $dc->sale->reference ?? '' }}"
-                                                    data-transport="{{ $dc->sale->transport_name ?? '' }}"
-                                                    data-items="{{ json_encode(
-                                                        $dc->items->map(function ($i) {
-                                                            return [
-                                                                'product_id' => $i->product_id,
-                                                                'product_name' => $i->product->item_name ?? '',
-                                                                'item_code' => $i->product->item_code ?? '',
-                                                                'ppb' => $i->product->pieces_per_box ?? 1,
-                                                                'total_pieces' => $i->total_pieces,
-                                                                'price' => $i->price,
-                                                                'unit_discount' => $i->saleItem && $i->saleItem->total_pieces > 0 ? $i->saleItem->discount_amount / $i->saleItem->total_pieces : 0, 
-                                                                'batch_id' => $i->batch_id,
-                                                                'lot_no' => $i->lot_number,
-                                                                'warehouse_id' => $i->warehouse_id,
-                                                                'uom_name' => $i->uom->name ?? ($i->product->unit->name ?? 'Piece'),
-                                                            ];
-                                                        }),
-                                                    ) }}">
-                                                    <i class="bi bi-arrow-down-square me-1"></i> Import
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @endforeach
+
+                                    {{-- Visual separator for advance DCs in SO mode --}}
+                                    @if ($advanceDcNotes->count() > 0)
+                                    <tr>
+                                        <td colspan="7" style="background:#fffbeb; color:#92400e; font-weight:700; padding:6px 14px; font-size:12px; border-top:2px solid #fbbf24;">
+                                            <i class="bi bi-truck me-1"></i> Advance Delivery Notes &mdash; Pending Sale Invoice
+                                        </td>
+                                    </tr>
+                                    @endif
                                 @endif
+
+                                {{-- Advance DCs (always shown in SO mode); All DC notes in SIN mode --}}
+                                @foreach ($isSoMode ? $advanceDcNotes : $dcNotes as $dc)
+                                    @php $hasDraftItems = true; @endphp
+                                    <tr class="booked-item-row"
+                                        data-search="{{ strtolower($dc->dc_no . ' ' . ($dc->customer->customer_name ?? '')) }}">
+                                        <td>
+                                            <i class="bi bi-file-earmark-arrow-down text-warning"></i>
+                                        </td>
+                                        <td><span class="badge bg-warning text-dark border">{{ $dc->dc_no }}</span>
+                                        </td>
+                                        <td>{{ \Carbon\Carbon::parse($dc->delivery_date)->format('d M, Y') }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="vendor-initial bg-primary-subtle text-primary fw-bold rounded-3 p-2"
+                                                    style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                                                    {{ strtoupper(substr($dc->customer->customer_name ?? 'C', 0, 1)) }}
+                                                </div>
+                                                <div class="d-flex flex-column">
+                                                    <span
+                                                        class="fw-bold text-dark">{{ $dc->customer->customer_name ?? 'N/A' }}</span>
+                                                    <span
+                                                        class="text-muted small">{{ $dc->customer->business_name ?? 'Individual' }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end fw-bold">{{ $dc->items->count() }}</td>
+                                        <td class="text-end fw-bold text-primary">
+                                            {{ number_format($dc->net_amount, 2) }}</td>
+                                        <td class="text-end">
+                                            <button type="button"
+                                                class="btn btn-warning btn-sm rounded-pill px-4 btn-import-single"
+                                                title="Import DC Note as Sale Invoice"
+                                                data-customer-id="{{ $dc->customer_id }}"
+                                                data-is-advance="{{ $dc->is_advance ? '1' : '0' }}"
+                                                data-dc-id="{{ $dc->id }}"
+                                                data-draft-id="{{ $dc->sale_id }}"
+                                                data-warehouse-id="{{ $dc->items->first()->warehouse_id ?? '' }}"
+                                                data-delivery-date="{{ $dc->delivery_date }}"
+                                                data-dc-no="{{ $dc->dc_no }}"
+                                                data-sale-order-no="{{ $dc->sale->invoice_no ?? '' }}"
+                                                data-discount="{{ $dc->sale->discount ?? 0 }}"
+                                                data-freight="{{ $dc->sale->freight_charges ?? 0 }}"
+                                                data-expense="{{ $dc->sale->extra_cost ?? 0 }}"
+                                                data-employee="{{ $dc->sale->employee_id ?? '' }}"
+                                                data-reference="{{ $dc->sale->reference ?? '' }}"
+                                                data-transport="{{ $dc->sale->transport_name ?? '' }}"
+                                                data-items="{{ json_encode(
+                                                    $dc->items->map(function ($i) {
+                                                        return [
+                                                            'product_id' => $i->product_id,
+                                                            'product_name' => $i->product->item_name ?? '',
+                                                            'item_code' => $i->product->item_code ?? '',
+                                                            'ppb' => $i->product->pieces_per_box ?? 1,
+                                                            'total_pieces' => $i->total_pieces,
+                                                            'price' => $i->price,
+                                                            'unit_discount' => $i->saleItem && $i->saleItem->total_pieces > 0 ? $i->saleItem->discount_amount / $i->saleItem->total_pieces : 0,
+                                                            'batch_id' => $i->batch_id,
+                                                            'lot_no' => $i->lot_number,
+                                                            'warehouse_id' => $i->warehouse_id,
+                                                            'uom_name' => $i->uom->name ?? ($i->product->unit->name ?? 'Piece'),
+                                                        ];
+                                                    }),
+                                                ) }}">
+                                                <i class="bi bi-arrow-down-square me-1"></i> Import Invoice
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
 
                                 @if (!$hasDraftItems)
                                     <tr id="emptyBookedRow">
@@ -1542,8 +1555,8 @@
 
 
             let warningText =
-                "This will officially update inventory stock and financial accounts. This action is irreversible.";
-            let warningTitle = "Confirm & Post Sale?";
+                "This action will affect your inventory stock and this change is irreversible.";
+            let warningTitle = "Are you sure you want to post this sale?";
             let warningIcon = "warning";
             let confirmBtnColor = '#059669';
             let confirmBtnText = 'Yes, Post it!';
@@ -1772,8 +1785,8 @@
             const advTaxPct = num($row.find('.adv-tax').val());
             const incTaxAmt = subTotal * (incTaxPct / 100); // WHT: DEDUCTED
             const advTaxAmt = subTotal * (advTaxPct / 100); // Adv: DEDUCTED
-            // Line net: sub + GST - WHT - Adv
-            const netTotal  = subTotal + gstAmt - incTaxAmt - advTaxAmt;
+            // Line net: sub + GST - WHT + Adv
+            const netTotal  = subTotal + gstAmt - incTaxAmt + advTaxAmt;
 
             $row.find('.row-sub-total').val(subTotal.toFixed(2));
             $row.find('.row-net-total').val(netTotal.toFixed(2));
@@ -1862,7 +1875,7 @@
             // Net Payable = Invoice Total - WHT - Adv
             const gstBase     = summarySub + sumFreight + sumExpense + sumApplyGst;
             const invoiceTotal = gstBase + totalGstAmt;
-            let finalNet       = invoiceTotal - totalIncTax - totalAdvTax;
+            let finalNet       = invoiceTotal - totalIncTax + totalAdvTax;
             $('#invoice_total').val(invoiceTotal.toFixed(2));
             $('#final_net_total').val(finalNet.toFixed(2));
 
@@ -2025,30 +2038,11 @@
             var $triggerRow = $triggerBtn.closest('tr');
             var triggerRowEmpty = !$triggerRow.find('.item-id').val();
             
-            // Collect currently selected IDs to highlight in modal
-            const selectedIds = [];
-            $('#saleItems tr').each(function() {
-                const pid = $(this).find('.item-id').val();
-                if (pid) selectedIds.push(parseInt(pid));
-            });
-
             ERPProductModal.open({
                 priceField: 'sale',
-                selectedIds: selectedIds,
+                selectedIds: [],
                 onSelect: function(products) {
                     products.forEach(function(p, idx) {
-                        // Duplicate guard
-                        var $existing = null;
-                        $('#saleItems tr').each(function() {
-                            if (parseInt($(this).find('.item-id').val()) === parseInt(p.id)) {
-                                $existing = $(this); return false;
-                            }
-                        });
-                        if ($existing) {
-                            $existing.find('.quantity').val((parseInt($existing.find('.quantity').val()) || 0) + 1).trigger('input');
-                            return;
-                        }
-
                         // First product replaces the triggering row, subsequent products get new rows
                         var $row = (idx === 0) ? $triggerRow : addBlankRow();
                         populateProductRow($row, p);
@@ -2443,6 +2437,21 @@
         }
 
         $('.btn-import-single').on('click', function() {
+            const $btn = $(this);
+            const isAdvance = $btn.data('is-advance') == '1';
+            const currentMode = $('input[name="mode"]').val();
+
+            // If importing an advance DC while in SO mode, auto-switch to SIN (Sale Invoice) mode
+            if (isAdvance && currentMode === 'so') {
+                $('input[name="mode"]').val('sin');
+                // Update visible page heading to reflect invoice mode
+                $('h1.page-title').html('<i class="bi bi-box-seam me-2 text-primary"></i> Sale Invoice Note');
+                $('p.page-subtitle').text('Record outward stock to customers efficiently.');
+                // ── Swap action buttons ──
+                $('#btnSaveOnly').hide();
+                $('#btnConfirm').show();
+            }
+
             if (window.ERPImportLoader) window.ERPImportLoader.start();
             importBookedItem(this);
             $('#bookedProductsModal').modal('hide');

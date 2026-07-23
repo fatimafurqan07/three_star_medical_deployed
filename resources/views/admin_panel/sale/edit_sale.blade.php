@@ -1071,8 +1071,8 @@
 
                 if (isPost) {
                     Swal.fire({
-                        title: 'Confirm & Post Sale?',
-                        text: "This will officially update inventory and finance. Continue?",
+                        title: 'Are you sure you want to post this sale?',
+                        text: "This action will affect your inventory stock and this change is irreversible.",
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#059669',

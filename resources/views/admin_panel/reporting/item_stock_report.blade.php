@@ -1193,6 +1193,7 @@
                     gPur = 0,
                     gPurRet = 0,
                     gSold = 0,
+                    gDonated = 0,
                     gSaleRet = 0,
                     gAdj = 0,
                     gBal = 0,
@@ -1212,6 +1213,7 @@
                     gPur += parseFloat(r.purchased || 0);
                     gPurRet += parseFloat(r.purchase_return_qty || 0);
                     gSold += parseFloat(r.sold || 0);
+                    gDonated += parseFloat(r.donated || 0);
                     gSaleRet += parseFloat(r.sale_return_qty || 0);
                     gAdj += parseFloat(r.adjusted_qty || 0);
                     gBal += parseFloat(r.balance || 0);
@@ -1247,6 +1249,7 @@
                         '<span style="color:#1d4ed8;font-weight:600;">' + fmt(Math.abs(r.purchased), 0) + '</span>',
                         '<span style="color:#dc2626;font-weight:600;">-' + fmt(Math.abs(r.purchase_return_qty), 0) + '</span>',
                         '<span style="color:#b45309;font-weight:600;">-' + fmt(Math.abs(r.sold), 0) + '</span>',
+                        '<span style="color:#0284c7;font-weight:600;">-' + fmt(Math.abs(r.donated || 0), 0) + '</span>',
                         '<span style="color:#7c3aed;font-weight:600;">+' + fmt(Math.abs(r.sale_return_qty), 0) + '</span>',
                         '<span style="color:#64748b;">' + (r.adjusted_qty >= 0 ? '+' : '-') + fmt(Math.abs(r.adjusted_qty), 0) + '</span>',
                         balanceCell(r),
@@ -1278,6 +1281,7 @@
                     gPur,
                     gPurRet,
                     gSold,
+                    gDonated,
                     gSaleRet,
                     gAdj,
                     gBal,
@@ -1295,6 +1299,7 @@
                 $('#ftPurchased').text(fmt(Math.abs(g.gPur), 0));
                 $('#ftPurRet').text('-' + fmt(Math.abs(g.gPurRet), 0));
                 $('#ftSold').text('-' + fmt(Math.abs(g.gSold), 0));
+                $('#ftDonated').text('-' + fmt(Math.abs(g.gDonated), 0));
                 $('#ftSaleRet').text('+' + fmt(Math.abs(g.gSaleRet), 0));
                 $('#ftAdjusted').text((g.gAdj >= 0 ? '+' : '-') + fmt(Math.abs(g.gAdj), 0));
                 $('#ftBalance').text(fmt(g.gBal, 0));

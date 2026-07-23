@@ -58,8 +58,12 @@ class DeliveryNote extends Model
     public static function generateDcNo(?int $saleId, ?int $branchId = null): string
     {
         if ($saleId === null) {
-            $dcCount = self::whereNull('sale_id')->count();
-            return '0-' . str_pad($dcCount + 1, 2, '0', STR_PAD_LEFT);
+            $latest = self::where('dc_no', 'like', '0-%')->orderBy('id', 'desc')->first();
+            $num = 1;
+            if ($latest && preg_match('/^0-(\d+)$/', $latest->dc_no, $matches)) {
+                $num = (int)$matches[1] + 1;
+            }
+            return '0-' . str_pad($num, 2, '0', STR_PAD_LEFT);
         }
 
         // 1. Find the sequential rank of this sale_id among all sales that have DCs
