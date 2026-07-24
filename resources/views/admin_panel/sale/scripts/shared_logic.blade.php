@@ -259,11 +259,20 @@
             if (pRes.packings && pRes.packings.length > 0) {
                 pRes.packings.forEach(function(pkg) {
                     var ppb = pkg.pieces_per_box > 0 ? pkg.pieces_per_box : 1;
-                    $uomSelect.append('<option value="'+pkg.id+'" data-factor="'+ppb+'">'+pkg.name+'</option>');
+                    if (ppb <= 1) {
+                        var match = pkg.name ? pkg.name.match(/1[xX](\d+)/) : null;
+                        if (!match && pRes.item_name) match = pRes.item_name.match(/1[xX](\d+)/);
+                        if (match && parseInt(match[1]) > 0) ppb = parseInt(match[1]);
+                    }
+                    $uomSelect.append('<option value="'+pkg.id+'" data-factor="'+ppb+'" data-ppb="'+ppb+'">'+pkg.name+'</option>');
                 });
             } else {
                 var ppb = pRes.pieces_per_box || 1;
-                $uomSelect.append('<option value="" data-factor="'+ppb+'">' + (pRes.unit ? pRes.unit.name : 'Piece') + '</option>');
+                if (ppb <= 1 && pRes.item_name) {
+                    var match = pRes.item_name.match(/1[xX](\d+)/);
+                    if (match && parseInt(match[1]) > 0) ppb = parseInt(match[1]);
+                }
+                $uomSelect.append('<option value="" data-factor="'+ppb+'" data-ppb="'+ppb+'">' + (pRes.unit ? pRes.unit.name : 'Piece') + '</option>');
             }
             $uomSelect.append('<option value="new_uom" style="background:#f0f0f0; font-weight:bold; color:#2563eb;">+ Add New Packing</option>');
             $uomSelect.trigger('change');

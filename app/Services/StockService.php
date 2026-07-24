@@ -72,6 +72,15 @@ class StockService
 
         $stock = $query->first();
 
+        if (!$stock && $pieceDelta < 0) {
+            // Fallback: search for any stock row for this (warehouse, product) regardless of uom_id
+            $stock = WarehouseStock::where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->where('total_pieces', '>', 0)
+                ->lockForUpdate()
+                ->first();
+        }
+
         if ($stock) {
             $newPieces = $stock->total_pieces + $pieceDelta;
 
@@ -118,7 +127,13 @@ class StockService
             $query->whereNull('uom_id');
         }
 
-        return (float) ($query->value('total_pieces') ?? 0);
+        $val = (float) ($query->value('total_pieces') ?? 0);
+        if ($val <= 0) {
+            // Fallback to total pieces in this warehouse for this product regardless of uom_id
+            return static::totalBalance($productId, $warehouseId);
+        }
+
+        return $val;
     }
 
     /**

@@ -245,9 +245,15 @@ class ReportingController extends Controller
             $branchId     = $request->get('branch_id', 'all');
             $reportType   = $request->get('report_type', 'summary');
 
+            $user = auth()->user();
+            if ($user && !$user->isSuperAdmin()) {
+                $branchId = $user->getBranchId();
+            } else {
+                $branchId = ($branchId && $branchId !== 'all') ? (int)$branchId : null;
+            }
+
             // Normalise "all" to null
             $warehouseId = ($warehouseId && $warehouseId !== 'all') ? (int)$warehouseId : null;
-            $branchId    = ($branchId    && $branchId    !== 'all') ? (int)$branchId    : null;
 
             // ── 1. Product base query ────────────────────────────────────────
             $query = Product::with(['brand', 'category_relation', 'sub_category_relation', 'unit', 'packings']);
@@ -504,7 +510,7 @@ class ReportingController extends Controller
                 'ledger_data'    => $ledgerData,
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
         }
     }

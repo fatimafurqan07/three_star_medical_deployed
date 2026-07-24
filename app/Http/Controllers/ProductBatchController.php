@@ -33,7 +33,7 @@ class ProductBatchController extends Controller
     {
         Warehouse::ensureShopWarehousesExists();
 
-        $products   = Product::orderBy('item_name')->get(['id', 'item_name', 'item_code']);
+        $products   = Product::with('packings')->orderBy('item_name')->get();
         $branchId   = $this->getBranchId();
 
         $shops = Warehouse::where('type', 'shop')
@@ -150,12 +150,16 @@ class ProductBatchController extends Controller
                 $qtyStr = rtrim(rtrim((string)$piecesFloat, '0'), '.');
             }
 
+            $isNoExp = $b->exp_date && $b->exp_date->year >= 2090;
+            $expDisp = $isNoExp ? 'No Expiry' : $b->exp_date->format('M Y');
+            $expLabel = $isNoExp ? 'No Expiry' : $b->exp_date->format('d M Y');
+
             return [
             'id'            => $b->id,
-            'label'         => "Batch {$b->batch_number} | EXP: {$b->exp_date->format('M Y')} | Qty: {$qtyStr}",
+            'label'         => "Batch {$b->batch_number} | EXP: {$expDisp} | Qty: {$qtyStr}",
             'batch_number'  => $b->batch_number,
             'exp_date'      => $b->exp_date->format('Y-m-d'),
-            'exp_label'     => $b->exp_date->format('d M Y'),
+            'exp_label'     => $expLabel,
             'qty_remaining' => $b->qty_remaining,
             'days_to_expiry' => $b->days_to_expiry,
             'expiry_status' => $b->expiry_status,
@@ -269,6 +273,7 @@ class ProductBatchController extends Controller
                 $deductions[] = ['batch_id' => $batch->id, 'qty' => $remaining];
             } else {
                 // FEFO Auto mode — sort by earliest expiry
+                // 1. Try preferred warehouse first
                 $batches = ProductBatch::available()
                     ->where('product_id', $productId)
                     ->where('warehouse_id', $warehouseId)
@@ -277,23 +282,48 @@ class ProductBatchController extends Controller
                     ->lockForUpdate()
                     ->get();
 
+                // 2. Fallback: If preferred warehouse doesn't have enough stock, query other warehouses in the same branch
+                if ($batches->sum('qty_remaining') < $remaining) {
+                    $otherBatches = ProductBatch::available()
+                        ->where('product_id', $productId)
+                        ->where('branch_id', $branchId)
+                        ->where('warehouse_id', '!=', $warehouseId)
+                        ->orderBy('exp_date', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+                    $batches = $batches->concat($otherBatches);
+                }
+
                 foreach ($batches as $batch) {
                     if ($remaining <= 0) break;
 
-                    $deductQty = min($batch->qty_remaining, $remaining);
+                    $deductQty = min((float)$batch->qty_remaining, $remaining);
                     $batch->qty_remaining -= $deductQty;
                     if ($batch->qty_remaining <= 0) {
                         $batch->status = 'consumed';
                     }
                     $batch->save();
 
-                    $deductions[] = ['batch_id' => $batch->id, 'qty' => $deductQty];
+                    // Sync WarehouseStock for this batch's warehouse
+                    $whStock = \App\Models\WarehouseStock::where('warehouse_id', $batch->warehouse_id)
+                        ->where('product_id', $productId)
+                        ->first();
+                    if ($whStock) {
+                        $whStock->total_pieces = max(0, (float)$whStock->total_pieces - $deductQty);
+                        $ppb = $batch->product->pieces_per_box > 0 ? (float)$batch->product->pieces_per_box : 1;
+                        $boxes = intdiv((int)$whStock->total_pieces, (int)$ppb);
+                        $rem = (int)$whStock->total_pieces % (int)$ppb;
+                        $whStock->quantity = (float)($boxes . '.' . $rem);
+                        $whStock->save();
+                    }
+
+                    $deductions[] = ['batch_id' => $batch->id, 'qty' => $deductQty, 'warehouse_id' => $batch->warehouse_id];
                     $remaining   -= $deductQty;
                 }
 
                 if ($remaining > 0) {
                     $productName = \App\Models\Product::where('id', $productId)->value('item_name');
-                    throw \Illuminate\Validation\ValidationException::withMessages(['error' => "Insufficient stock for {$productName}. Missing {$remaining} units in the selected warehouse."]);
+                    throw \Illuminate\Validation\ValidationException::withMessages(['error' => "Insufficient stock for {$productName}. Missing {$remaining} units in the active branch."]);
                 }
             }
 

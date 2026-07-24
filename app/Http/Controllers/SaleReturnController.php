@@ -23,9 +23,10 @@ class SaleReturnController extends Controller
 
     public function createBlank()
     {
-        $customers = \App\Models\Customer::orderBy('customer_name')->get();
+        $branchId = $this->getBranchId() ?? 1;
+        $customers = \App\Models\Customer::when($branchId, fn ($q) => $q->where('branch_id', $branchId))->orderBy('customer_name')->get();
         $accounts = app(\App\Services\BalanceService::class)->getPaymentAccounts();
-        $warehouses = \App\Models\Warehouse::all();
+        $warehouses = \App\Models\Warehouse::when($branchId, fn ($q) => $q->where('branch_id', $branchId))->get();
         return view('admin_panel.sale.sale_return.create', ['sale' => null, 'customers' => $customers, 'accounts' => $accounts, 'saleItems' => [], 'warehouses' => $warehouses]);
     }
 

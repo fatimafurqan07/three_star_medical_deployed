@@ -65,13 +65,24 @@ class ProductBatch extends Model
 
     // ===================== Helpers =====================
 
+    public function getIsNonExpiringAttribute(): bool
+    {
+        return $this->exp_date && Carbon::parse($this->exp_date)->year >= 2090;
+    }
+
     public function getDaysToExpiryAttribute(): int
     {
+        if ($this->is_non_expiring) {
+            return 99999;
+        }
         return (int) now()->startOfDay()->diffInDays(Carbon::parse($this->exp_date)->startOfDay(), false);
     }
 
     public function getExpiryStatusAttribute(): string
     {
+        if ($this->is_non_expiring) {
+            return 'no_expiry';
+        }
         $days = $this->days_to_expiry;
         if ($days < 0) {
             return 'expired';
@@ -89,6 +100,7 @@ class ProductBatch extends Model
     public function getExpiryBadgeClassAttribute(): string
     {
         return match ($this->expiry_status) {
+            'no_expiry' => 'bg-success text-white',
             'expired' => 'bg-danger',
             'critical' => 'bg-warning text-dark',
             'warning' => 'bg-info text-dark',

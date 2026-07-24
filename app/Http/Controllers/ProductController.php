@@ -62,11 +62,10 @@ class ProductController extends Controller
 
         $product = Product::with(['packings', 'unit'])
             ->withSum(['warehouseStocks' => function ($q) use ($user) {
-                if (!$user->hasRole('Super Admin')) {
-                    $q->whereHas('warehouse', function ($wh) use ($user) {
-                        $wh->where('branch_id', $user->branch_id);
-                    });
-                }
+                $branchId = $user->getBranchId() ?: 1;
+                $q->whereHas('warehouse', function ($wh) use ($branchId) {
+                    $wh->where('branch_id', $branchId);
+                });
             }], 'total_pieces')
             ->addSelect([
                 'last_purchased_price' => \DB::table('purchase_items')
@@ -96,12 +95,10 @@ class ProductController extends Controller
             ->select('id', 'item_name', 'item_code', 'barcode_path', 'size_mode', 'pieces_per_box', 'purchase_price_per_piece', 'hs_code')
             ->select('products.*')
             ->with(['packings', 'unit'])
-            ->withSum(['warehouseStocks' => function ($q) use ($user) {
-                if (!$user->hasRole('Super Admin')) {
-                    $q->whereHas('warehouse', function ($wh) use ($user) {
-                        $wh->where('branch_id', $user->branch_id);
-                    });
-                }
+            ->withSum(['warehouseStocks' => function ($q) use ($branchId) {
+                $q->whereHas('warehouse', function ($wh) use ($branchId) {
+                    $wh->where('branch_id', $branchId);
+                });
             }], 'total_pieces') /* Sum PIECES, not boxes */
             ->addSelect([
                 'last_purchased_price' => \DB::table('purchase_items')
@@ -203,12 +200,10 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->with(['category_relation', 'sub_category_relation', 'brand', 'packings', 'unit'])
-            ->withSum(['warehouseStocks' => function ($q) use ($user) {
-                if (!$user->hasRole('Super Admin')) {
-                    $q->whereHas('warehouse', function ($wh) use ($user) {
-                        $wh->where('branch_id', $user->branch_id);
-                    });
-                }
+            ->withSum(['warehouseStocks' => function ($q) use ($branchId) {
+                $q->whereHas('warehouse', function ($wh) use ($branchId) {
+                    $wh->where('branch_id', $branchId);
+                });
             }], 'total_pieces')
             ->addSelect([
                 'last_purchased_price' => \DB::table('purchase_items')
@@ -298,7 +293,7 @@ class ProductController extends Controller
     }
 
     // ===== Get warehouses that have stock for a product =====
-    public function getProductWarehouses($id)
+    public function getProductWarehouses(Request $request, $id)
     {
         $user = auth()->user();
         $product = \App\Models\Product::find($id);
@@ -309,12 +304,13 @@ class ProductController extends Controller
 
         $ppb = (float) ($product->pieces_per_box > 0 ? $product->pieces_per_box : 1);
         $sizeMode = $product->size_mode ?? 'by_pieces';
+        $branchId = $user ? $user->getBranchId() : null;
 
         $stocks = \App\Models\WarehouseStock::with('warehouse')
             ->where('product_id', $id)
             ->when(!$request->has('include_empty'), fn($q) => $q->where('total_pieces', '>', 0))
-            ->when(!$user->hasRole('Super Admin'), function ($q) use ($user) {
-                $q->whereHas('warehouse', fn($w) => $w->where('branch_id', $user->branch_id));
+            ->when($branchId, function ($q, $bid) {
+                $q->whereHas('warehouse', fn($w) => $w->where('branch_id', $bid));
             })
             ->get();
 
@@ -387,11 +383,10 @@ class ProductController extends Controller
             'unit',
             'packings',
             'warehouseStocks' => function ($q) use ($user) {
-                if (!$user->hasRole('Super Admin')) {
-                    $q->whereHas('warehouse', function ($wh) use ($user) {
-                        $wh->where('branch_id', $user->branch_id);
-                    });
-                }
+                $branchId = $user->getBranchId() ?: 1;
+                $q->whereHas('warehouse', function ($wh) use ($branchId) {
+                    $wh->where('branch_id', $branchId);
+                });
             },
         ])->find($id);
 

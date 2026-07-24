@@ -228,33 +228,56 @@
 
     <!-- Row Template -->
     <template id="rowTemplate">
-        <div class="batch-row" data-row-index="__IDX__">
-            <button type="button" class="btn-remove-row" onclick="removeRow(this)" title="Remove">&times;</button>
+        <div class="batch-row p-3 mb-4 bg-white border rounded-4 shadow-sm position-relative" data-row-index="__IDX__">
+            <button type="button" class="btn-remove-row btn btn-sm btn-outline-danger border-0 rounded-circle position-absolute top-0 end-0 m-3" onclick="removeRow(this)" title="Remove Row">
+                <i class="las la-times fs-5"></i>
+            </button>
+
+            <!-- Row Header -->
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <span class="badge bg-primary-subtle text-primary fw-bold rounded-pill px-3 py-1" style="font-size:0.8rem;">Batch Row #<span class="row-num-display">__ROW_NUM__</span></span>
+                <span class="text-muted small">Specify product, location, quantity in cartons/pcs and batch details.</span>
+            </div>
+            
             <div class="row g-3">
-                <div class="col-md-4">
+                <!-- Row 1: Product, Location, Boxes, Loose -->
+                <div class="col-md-5">
                     <label class="form-label-pro">Medicine / Product <span class="text-danger">*</span></label>
                     <select name="product_id" class="form-control-pro product-select" required>
                         <option value="">— Select Product —</option>
                         @foreach ($products as $p)
-                            <option value="{{ $p->id }}">{{ $p->item_name }} ({{ $p->item_code }})</option>
+                            @php
+                                $uom = $p->packings->first();
+                                $packName = $uom && !empty($uom->name) ? $uom->name : null;
+                                $ppbVal   = $uom && $uom->pieces_per_box > 0 ? (int)$uom->pieces_per_box : ($p->pieces_per_box > 0 ? (int)$p->pieces_per_box : 1);
+                                if ($ppbVal <= 1) {
+                                    if ($packName && preg_match('/1[xX](\d+)/', $packName, $m)) {
+                                        $ppbVal = (int)$m[1];
+                                    } elseif (preg_match('/1[xX](\d+)/', $p->item_name, $m)) {
+                                        $ppbVal = (int)$m[1];
+                                    }
+                                }
+                                if (!$packName || $packName === '1X1') {
+                                    $packName = "1X{$ppbVal}";
+                                }
+                            @endphp
+                            <option value="{{ $p->id }}" data-ppb="{{ $ppbVal }}" data-packname="{{ $packName }}">{{ $p->item_name }} ({{ $p->item_code }}) — [{{ $packName }}]</option>
                         @endforeach
                     </select>
                 </div>
+
                 <div class="col-md-3">
                     <label class="form-label-pro">Location <span class="text-danger">*</span></label>
                     <select class="form-control-pro location-select" required>
                         <option value="">— Select Location —</option>
-                        <optgroup label="🏪 Shops (Retail)">
+                        <optgroup label="🏪 Shops">
                             @foreach ($shops as $s)
                                 <option value="shop__{{ $s->id }}" data-type="shop" data-wid="{{ $s->id }}"
                                 >{{ $s->warehouse_name }}</option>
                             @endforeach
                         </optgroup>
-                        <optgroup label="🏭 Warehouses (Storage)">
-                            @foreach ($warehouses as $w)
-                                <option value="wh__{{ $w->id }}" data-type="warehouse" data-wid="{{ $w->id }}"
-                                >{{ $w->warehouse_name }}</option>
-                            @endforeach
+                        <optgroup label="🏭 Warehouses">
+                            <option value="warehouse_group" data-type="warehouse">🏭 Warehouse</option>
                         </optgroup>
                     </select>
                     <!-- Hidden resolved warehouse_id sent to server -->
@@ -270,28 +293,51 @@
                         </select>
                     </div>
                 </div>
+
                 <div class="col-md-2">
-                    <label class="form-label-pro">Qty <span class="text-danger">*</span></label>
-                    <input type="number" name="qty" class="form-control-pro" placeholder="0" step="0.01"
-                        min="0.01" required>
+                    <label class="form-label-pro">Box Qty (Cartons)</label>
+                    <input type="number" class="form-control-pro box-qty-input text-end fw-semibold" placeholder="0" min="0" step="1">
                 </div>
+
+                <div class="col-md-2">
+                    <label class="form-label-pro">Loose Pcs</label>
+                    <input type="number" class="form-control-pro loose-qty-input text-end fw-semibold" placeholder="0" min="0" step="1">
+                </div>
+
+                <!-- Row 2: Batch Number, MFG Date, EXP Date, Expiry Status, Total Stock Summary -->
                 <div class="col-md-3">
                     <label class="form-label-pro">Batch / Lot No. <span class="text-danger">*</span></label>
-                    <input type="text" name="batch_number" class="form-control-pro" placeholder="e.g. BT-2024-001"
-                        required>
+                    <input type="text" name="batch_number" class="form-control-pro" placeholder="e.g. BT-2024-001" required>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-2">
                     <label class="form-label-pro">MFG Date</label>
                     <input type="text" name="mfg_date" class="form-control-pro mfg-datepicker" placeholder="dd/mm/yyyy">
                 </div>
+
                 <div class="col-md-3">
-                    <label class="form-label-pro">EXP Date <span class="text-danger">*</span></label>
-                    <input type="text" name="exp_date" class="form-control-pro exp-datepicker" placeholder="dd/mm/yyyy" required>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <label class="form-label-pro mb-0">EXP Date <span class="text-danger">*</span></label>
+                        <div class="form-check form-check-inline mb-0 me-0">
+                            <input class="form-check-input no-expiry-check" type="checkbox" id="no_exp___IDX__" onchange="toggleNoExpiry(this)">
+                            <label class="form-check-label small fw-bold text-success" for="no_exp___IDX__" style="font-size:0.75rem; cursor:pointer;">♾️ No Expiry</label>
+                        </div>
+                    </div>
+                    <input type="text" name="exp_date" class="form-control-pro exp-datepicker mt-1" placeholder="dd/mm/yyyy" required>
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <div id="exp_badge___IDX__"
-                        class="badge-exp bg-secondary text-white px-3 py-2 rounded-3 w-100 text-center"></div>
+
+                <div class="col-md-2 d-flex flex-column justify-content-end">
+                    <label class="form-label-pro">Status</label>
+                    <div id="exp_badge___IDX__" class="badge-exp bg-secondary text-white px-2 py-2 rounded-3 w-100 text-center fw-bold" style="font-size:0.75rem;">—</div>
                 </div>
+
+                <div class="col-md-2 d-flex flex-column justify-content-end">
+                    <label class="form-label-pro text-primary fw-bold">Stock Entry</label>
+                    <div class="p-2 bg-primary-subtle border border-primary-subtle rounded-3 text-center">
+                        <span class="fw-bold text-primary total-pcs-badge" style="font-size: 0.85rem;">0 Total Pcs</span>
+                    </div>
+                </div>
+
             </div>
         </div>
     </template>
@@ -303,8 +349,73 @@
     <script>
         let rowCount = 0;
 
+        // Central Product Packing Lookup Dictionary
+        const PRODUCT_PACKINGS = {
+            @foreach ($products as $p)
+                @php
+                    $uom = $p->packings->first();
+                    $packName = $uom && !empty($uom->name) ? $uom->name : null;
+                    $ppbVal   = $uom && $uom->pieces_per_box > 0 ? (int)$uom->pieces_per_box : ($p->pieces_per_box > 0 ? (int)$p->pieces_per_box : 1);
+                    if ($ppbVal <= 1) {
+                        if ($packName && preg_match('/1[xX](\d+)/', $packName, $m)) {
+                            $ppbVal = (int)$m[1];
+                        } elseif (preg_match('/1[xX](\d+)/', $p->item_name, $m)) {
+                            $ppbVal = (int)$m[1];
+                        }
+                    }
+                    if (!$packName || $packName === '1X1') {
+                        $packName = "1X{$ppbVal}";
+                    }
+                @endphp
+                "{{ $p->id }}": { packName: @json($packName), ppb: {{ $ppbVal }} },
+            @endforeach
+        };
+
+        function recalcRowQty(row) {
+            const $pSel = $(row).find('.product-select');
+            const optVal = $pSel.val();
+            const $opt = optVal ? $pSel.find('option[value="' + optVal + '"]') : $();
+
+            let packName = 'Select product';
+            let ppb = 1;
+
+            if (optVal && $opt.length && optVal !== '') {
+                packName = $opt.attr('data-packname') || $opt.data('packname') || '';
+                ppb = parseInt($opt.attr('data-ppb') || $opt.data('ppb')) || 1;
+
+                // Smart Fallback: If ppb is 1 but packName or option text is e.g. "1X50" or "1X100", extract factor
+                if (ppb <= 1) {
+                    if (packName && packName.match(/1[xX](\d+)/)) {
+                        ppb = parseInt(packName.match(/1[xX](\d+)/)[1]);
+                    } else {
+                        const optText = $opt.text();
+                        if (optText && optText.match(/1[xX](\d+)/)) {
+                            ppb = parseInt(optText.match(/1[xX](\d+)/)[1]);
+                        }
+                    }
+                }
+                if (!packName || packName === '1X1') {
+                    packName = `1X${ppb}`;
+                }
+            }
+
+            const boxInput = row.querySelector('.box-qty-input');
+            const looseInput = row.querySelector('.loose-qty-input');
+            const boxes = parseFloat(boxInput ? boxInput.value : 0) || 0;
+            const loose = parseFloat(looseInput ? looseInput.value : 0) || 0;
+
+            const totalPcs = (boxes * ppb) + loose;
+            const badge = row.querySelector('.total-pcs-badge');
+            if (badge) {
+                badge.textContent = `${totalPcs} Total Pcs`;
+            }
+            return totalPcs;
+        }
+
         function addRow() {
-            const tpl = document.getElementById('rowTemplate').innerHTML.replace(/__IDX__/g, rowCount);
+            const tpl = document.getElementById('rowTemplate').innerHTML
+                .replace(/__IDX__/g, rowCount)
+                .replace(/__ROW_NUM__/g, rowCount + 1);
             const div = document.createElement('div');
             div.innerHTML = tpl;
             document.getElementById('batchRows').appendChild(div.firstElementChild);
@@ -337,6 +448,14 @@
             // Initialize Select2 on warehouse sub-dropdown
             $(row).find('.warehouse-sub-select').select2({ width: '100%' });
 
+            // Quantity Calculation Event Handlers
+            $(row).find('.product-select').on('change select2:select select2:clear', function() {
+                recalcRowQty(row);
+            });
+            $(row).find('.box-qty-input, .loose-qty-input').on('input', function() {
+                recalcRowQty(row);
+            });
+
             // Location change: show/hide warehouse sub-dropdown & resolve warehouse_id
             $(row).find('.location-select').on('change', function() {
                 const sel = this.options[this.selectedIndex];
@@ -367,36 +486,84 @@
             });
 
             rowCount++;
+            updateRowNumbers();
         }
 
         function removeRow(btn) {
             const row = btn.closest('.batch-row');
             if (document.querySelectorAll('.batch-row').length > 1) {
                 row.remove();
+                updateRowNumbers();
             } else {
                 alert('You need at least one row.');
             }
         }
 
-        function updateExpBadge(row, expDate) {
+        function updateRowNumbers() {
+            document.querySelectorAll('.batch-row').forEach((r, idx) => {
+                const display = r.querySelector('.row-num-display');
+                if (display) display.textContent = idx + 1;
+            });
+        }
+
+        function toggleNoExpiry(chk) {
+            const row = chk.closest('.batch-row');
+            const expInput = row.querySelector('.exp-datepicker');
             const badge = row.querySelector('[id^="exp_badge_"]');
+
+            if (chk.checked) {
+                if (expInput._flatpickr) {
+                    expInput._flatpickr.clear();
+                    expInput._flatpickr.setDate('2099-12-31');
+                } else {
+                    expInput.value = '2099-12-31';
+                }
+                expInput.readOnly = true;
+                badge.textContent = '♾️ NO EXPIRY';
+                badge.className = 'badge-exp bg-success text-white px-2 py-2 rounded-3 w-100 text-center fw-bold';
+            } else {
+                expInput.readOnly = false;
+                if (expInput._flatpickr) {
+                    expInput._flatpickr.clear();
+                } else {
+                    expInput.value = '';
+                }
+                updateExpBadge(row, '');
+            }
+        }
+
+        function updateExpBadge(row, expDate) {
+            const chk = row.querySelector('.no-expiry-check');
+            const badge = row.querySelector('[id^="exp_badge_"]');
+            if (chk && chk.checked) {
+                badge.textContent = '♾️ NO EXPIRY';
+                badge.className = 'badge-exp bg-success text-white px-2 py-2 rounded-3 w-100 text-center fw-bold';
+                return;
+            }
             if (!expDate) {
-                badge.textContent = '';
+                badge.textContent = '—';
+                badge.className = 'badge-exp bg-secondary text-white px-2 py-2 rounded-3 w-100 text-center fw-bold';
+                return;
+            }
+            const expYear = new Date(expDate).getFullYear();
+            if (expYear >= 2090) {
+                badge.textContent = '♾️ NO EXPIRY';
+                badge.className = 'badge-exp bg-success text-white px-2 py-2 rounded-3 w-100 text-center fw-bold';
                 return;
             }
             const days = Math.round((new Date(expDate) - new Date()) / (1000 * 60 * 60 * 24));
             if (days < 0) {
                 badge.textContent = 'EXPIRED';
-                badge.className = 'badge-exp bg-danger text-white px-3 py-2 rounded-3 w-100 text-center';
+                badge.className = 'badge-exp bg-danger text-white px-2 py-2 rounded-3 w-100 text-center fw-bold';
             } else if (days <= 30) {
                 badge.textContent = days + 'd left';
-                badge.className = 'badge-exp bg-warning text-dark px-3 py-2 rounded-3 w-100 text-center';
+                badge.className = 'badge-exp bg-warning text-dark px-2 py-2 rounded-3 w-100 text-center fw-bold';
             } else if (days <= 90) {
                 badge.textContent = days + 'd left';
-                badge.className = 'badge-exp bg-info text-dark px-3 py-2 rounded-3 w-100 text-center';
+                badge.className = 'badge-exp bg-info text-dark px-2 py-2 rounded-3 w-100 text-center fw-bold';
             } else {
                 badge.textContent = 'OK';
-                badge.className = 'badge-exp bg-success text-white px-3 py-2 rounded-3 w-100 text-center';
+                badge.className = 'badge-exp bg-success text-white px-2 py-2 rounded-3 w-100 text-center fw-bold';
             }
         }
 
@@ -437,6 +604,7 @@
                 const locSel      = row.querySelector('.location-select');
                 const locOpt      = locSel.options[locSel.selectedIndex];
                 const locType     = locOpt ? (locOpt.getAttribute('data-type') || '') : '';
+                const totalPcs    = recalcRowQty(row);
 
                 const obj = {
                     product_id:   row.querySelector('[name="product_id"]').value,
@@ -445,9 +613,9 @@
                     batch_number: row.querySelector('[name="batch_number"]').value,
                     mfg_date:     row.querySelector('[name="mfg_date"]').value || null,
                     exp_date:     row.querySelector('[name="exp_date"]').value,
-                    qty:          row.querySelector('[name="qty"]').value,
+                    qty:          totalPcs,
                 };
-                if (!obj.product_id || !obj.warehouse_id || !obj.batch_number || !obj.exp_date || !obj.qty) {
+                if (!obj.product_id || !obj.warehouse_id || !obj.batch_number || !obj.exp_date || !obj.qty || obj.qty <= 0) {
                     valid = false;
                 }
                 data.rows.push(obj);

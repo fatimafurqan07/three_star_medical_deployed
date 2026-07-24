@@ -35,8 +35,9 @@ class ProductBookingController extends Controller
 
     public function create(Request $request)
     {
-        $Customer = Customer::all();
-        $Warehouse = Warehouse::all();
+        $branchId = auth()->user()?->getBranchId() ?? 1;
+        $Customer = Customer::when($branchId, fn ($q) => $q->where('branch_id', $branchId))->get();
+        $Warehouse = Warehouse::when($branchId, fn ($q) => $q->where('branch_id', $branchId))->get();
         $sales = Sale::with(['customer_relation', 'items.product'])->get();
         // Use Sin- for Sale Invoice Note and So- for Sale Order
         $nextInvoice = Sale::generateInvoiceNo($request->branch_id, $request->mode == 'so' ? 'SO-' : 'SIN-'); // Bookings are usually SOs

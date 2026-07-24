@@ -1571,8 +1571,8 @@ class PurchaseController extends Controller
     {
         $accounts = app(\App\Services\BalanceService::class)->getPaymentAccounts();
         $vendors = \App\Models\Vendor::all();
-        $warehouses = \App\Models\Warehouse::all();
-
+        $branchId = $this->getBranchId() ?? 1;
+        $warehouses = \App\Models\Warehouse::when($branchId, fn ($q) => $q->where('branch_id', $branchId))->get();
         if (! $id) {
             $purchase = null;
             $purchaseItems = [];

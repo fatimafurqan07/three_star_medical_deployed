@@ -737,8 +737,8 @@
                                         <input type="text" class="form-control form-control-sm text-end w-50 bg-transparent border-0 summary-value text-danger" id="total_inc_tax" readonly value="0.00">
                                     </div>
                                     <div class="summary-row">
-                                        <span class="summary-label text-danger">Advance Tax <small>(Deducted ➖)</small></span>
-                                        <input type="text" class="form-control form-control-sm text-end w-50 bg-transparent border-0 summary-value text-danger" id="total_adv_tax" readonly value="0.00">
+                                        <span class="summary-label text-success fw-bold">Advance Tax <small>(Added ➕)</small></span>
+                                        <input type="text" class="form-control form-control-sm text-end w-50 bg-transparent border-0 summary-value text-success fw-bold" id="total_adv_tax" readonly value="0.00">
                                     </div>
                                     <div class="summary-row py-2">
                                         <span class="summary-label">Freight Charges</span>
@@ -900,10 +900,10 @@
 
                 // Pakistan Standard:
                 // Invoice Total = (summarySub + freight + expense) + GST
-                // Net Payable = Invoice Total - WHT - Adv
+                // Net Payable = Invoice Total - WHT + Adv
                 const gstBase     = summarySub + sumFreight + sumExpense;
                 const invoiceTotal = gstBase + totalGstAmt;
-                let finalNet       = invoiceTotal - totalIncTax - totalAdvTax;
+                let finalNet       = invoiceTotal - totalIncTax + totalAdvTax;
                 $('#invoice_total').val(invoiceTotal.toFixed(2));
                 $('#final_net_total').val(finalNet.toFixed(2));
             }

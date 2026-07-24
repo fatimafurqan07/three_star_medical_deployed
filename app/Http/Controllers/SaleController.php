@@ -142,7 +142,13 @@ class SaleController extends Controller
     public function searchpname(Request $request)
     {
         $q = $request->get('q');
-        $warehouseId = $request->get('warehouse_id', 1);
+        $warehouseId = $request->get('warehouse_id');
+
+        if (!$warehouseId) {
+            $branchId = $this->getBranchId();
+            $defaultWh = Warehouse::when($branchId, fn($q) => $q->where('branch_id', $branchId))->first();
+            $warehouseId = $defaultWh ? $defaultWh->id : 1;
+        }
 
         $products = Product::with(['brand', 'packings'])
             ->leftJoin('warehouse_stocks', function ($join) use ($warehouseId) {
@@ -1315,7 +1321,8 @@ class SaleController extends Controller
                 $discType = $request->item_disc_type[$index] ?? 'amount'; // 'amount' refers to total row discount (new default)
                 $gstRate   = (float) ($request->gst[$index] ?? 0);
                 $incTaxPct = (float) ($request->inc_tax[$index] ?? 0);  // Now treated as %
-                $advTaxPct = (float) ($request->adv_tax[$index] ?? 0);  // Now treated as %
+                $advTaxVal = (float) ($request->adv_tax[$index] ?? 0);
+                $advTaxType = $request->adv_tax_type[$index] ?? 'percent';
 
                 // Calculate Line Subtotal (after item discount)
                 $subTotal = (float) ($totalPieces * $dbPrice);
@@ -1336,11 +1343,12 @@ class SaleController extends Controller
                 // Pakistan Standard line calculation:
                 // GST is ADDED on post-disc subtotal
                 $rowGstAmount = $postDiscSub * ($gstRate / 100);
-                // WHT and Advance Tax are DEDUCTED (applied on post-disc subtotal, NOT on GST)
+                // WHT is DEDUCTED (applied on post-disc subtotal, NOT on GST)
                 $incTaxAmt    = $postDiscSub * ($incTaxPct / 100);
-                $advTaxAmt    = $postDiscSub * ($advTaxPct / 100);
-                // Line total stored: subtotal + GST - WHT - Adv
-                $lineTotal    = $postDiscSub + $rowGstAmount - $incTaxAmt - $advTaxAmt;
+                // Advance Tax is ADDED
+                $advTaxAmt    = ($advTaxType === 'percent') ? ($postDiscSub * ($advTaxVal / 100)) : $advTaxVal;
+                // Line total stored: subtotal + GST - WHT + Adv
+                $lineTotal    = $postDiscSub + $rowGstAmount - $incTaxAmt + $advTaxAmt;
 
                 $saleItem = new SaleItem;
                 $saleItem->sale_id = $sale->id;
@@ -1365,7 +1373,7 @@ class SaleController extends Controller
                 $saleItem->gst_percent = $gstRate;
                 $saleItem->gst_amount  = $rowGstAmount;
                 $saleItem->inc_tax     = $incTaxPct;   // store % for reference
-                $saleItem->adv_tax     = $advTaxPct;   // store % for reference
+                $saleItem->adv_tax     = $advTaxVal;   // store value for reference
                 $saleItem->total = $lineTotal;
 
                 // Meta
@@ -1402,6 +1410,9 @@ class SaleController extends Controller
                         $batchId,
                         $sale->branch_id
                     );
+                    if (!empty($deductions[0]['warehouse_id'])) {
+                        $saleItem->update(['warehouse_id' => $deductions[0]['warehouse_id']]);
+                    }
                     foreach ($deductions as $d) {
                         DB::table('sale_item_batches')->insert([
                             'sale_item_id' => $saleItem->id,
@@ -1471,7 +1482,7 @@ class SaleController extends Controller
             $netPostDisc        = $total_bill - $calcBillDiscAmount;
             $gstBase            = $netPostDisc + $sale->total_freight + $sale->total_expense;
             $invoiceTotal       = $gstBase + $total_gst;
-            $sale->total_net    = $invoiceTotal - $total_inc_tax - $total_adv_tax;
+            $sale->total_net    = $invoiceTotal - $total_inc_tax + $total_adv_tax;
             $sale->total_items = $total_items;
 
             $sale->cash = $request->cash ?? 0;
@@ -1612,14 +1623,21 @@ class SaleController extends Controller
             }
 
             if ($type === 'out') {
-                // Validate available stock for this specific UOM
-                $available = StockService::balance($productId, $uomId, $warehouseId);
-                if ($available < $qtyPieces) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'error' => 'Insufficient stock for '.($item->product->item_name ?? 'product').'. Available: '.$available.' pcs for this packing.'
-                    ]);
+                // Check if batch deduction was already processed for this sale item by ProductBatchController
+                $batchDeducted = DB::table('sale_item_batches')
+                    ->where('sale_item_id', $item->id)
+                    ->exists();
+
+                if (! $batchDeducted) {
+                    // Validate available stock for this specific UOM
+                    $available = StockService::balance($productId, $uomId, $warehouseId);
+                    if ($available < $qtyPieces) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'error' => 'Insufficient stock for '.($item->product->item_name ?? 'product').'. Available: '.$available.' pcs for this packing.'
+                        ]);
+                    }
+                    StockService::debit($productId, $uomId, $warehouseId, $branchId, $qtyPieces);
                 }
-                StockService::debit($productId, $uomId, $warehouseId, $branchId, $qtyPieces);
 
                 // Movement log
                 DB::table('stock_movements')->insert([

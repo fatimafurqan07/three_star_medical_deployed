@@ -562,7 +562,7 @@
                                                 <tr>
                                                     <td class="compact-lbl compact-td">SALE INVC #</td>
                                                     <td class="text-secondary fw-bold compact-td" style="width: 35%;">
-                                                        <input type="hidden" name="invoice_no"
+                                                        <input type="hidden"
                                                             value="{{ $nextInvoice ?? 'S-001017' }}">
                                                         <input type="text" name="sale_no" readonly
                                                             value="{{ $nextInvoice ?? 'S-001017' }}"
@@ -661,8 +661,11 @@
                                             </div>
                                             <div class="text-muted mt-2" style="font-size: 11px; font-weight: 600;">
                                                 STATUS: <span class="text-primary">UN-POSTED</span></div>
+                                            @php
+                                                $defaultWhId = isset($Warehouse) && $Warehouse->first() ? $Warehouse->first()->id : 1;
+                                            @endphp
+                                            <input type="hidden" id="warehouse_id_header" value="{{ $defaultWhId }}">
                                         </div>
-                                        <input type="hidden" id="warehouse_id_header" value="1">
                                     </div>
                                 </div>
                             </div>
@@ -893,10 +896,10 @@
                                             id="total_inc_tax" readonly tabindex="-1" value="0.00">
                                     </div>
 
-                                    <div class="summary-row text-info mt-1">
-                                        <span class="summary-label text-danger">Adv Tax <small>(Deducted ➖)</small></span>
+                                    <div class="summary-row text-success mt-1">
+                                        <span class="summary-label text-success fw-bold">Adv Tax <small>(Added ➕)</small></span>
                                         <input type="text"
-                                            class="form-control form-control-sm text-end w-50 bg-transparent border-0 summary-value text-danger"
+                                            class="form-control form-control-sm text-end w-50 bg-transparent border-0 summary-value text-success fw-bold"
                                             id="total_adv_tax" readonly tabindex="-1" value="0.00">
                                     </div>
 
@@ -1642,6 +1645,28 @@
             }
         });
 
+        // Toggle Advance Tax Type (% vs Rs)
+        $(document).on('click', '.toggle-adv-tax-type', function () {
+            let $btn = $(this);
+            let current = $btn.attr('data-type') || 'percent';
+            let next = (current === 'percent') ? 'amount' : 'percent';
+
+            $btn.attr('data-type', next).text(next === 'percent' ? '%' : 'Rs');
+            
+            if (next === 'percent') {
+                $btn.removeClass('btn-outline-secondary').addClass('btn-outline-info');
+            } else {
+                $btn.removeClass('btn-outline-info').addClass('btn-outline-secondary');
+            }
+
+            let $row = $btn.closest('tr');
+            if ($row.length) {
+                $row.find('.adv-tax-type').val(next);
+                recalcRow($row);
+                recalcSummary();
+            }
+        });
+
         // Standardized Product Row Population
         function populateProductRow($row, p) {
             const $btn = $row.find('.product-select-btn');
@@ -1671,7 +1696,15 @@
                 if (p.packings && p.packings.length > 0) {
                     p.packings.forEach(pkg => {
                         let f = parseInt(pkg.pieces_per_box) || 1;
-                        if (f === 1) f = parseInt(p.uom || p.pieces_per_box) || 1;
+                        if (f <= 1) {
+                            let match = pkg.name ? pkg.name.match(/1[xX](\d+)/) : null;
+                            if (!match && p.item_name) match = p.item_name.match(/1[xX](\d+)/);
+                            if (match && parseInt(match[1]) > 0) {
+                                f = parseInt(match[1]);
+                            } else {
+                                f = parseInt(p.uom || p.pieces_per_box) || 1;
+                            }
+                        }
                         if (seenFactors[f]) return;
                         seenFactors[f] = true;
                         optionsHtml += `<option value="${pkg.id}" data-ppb="${f}" data-price="${pkg.sale_price || 0}" data-mode="${p.size_mode || 'by_cartons'}">${pkg.name}</option>`;
@@ -1679,6 +1712,12 @@
                 } else {
                     // 2. Base Unit (Only add if NO specialized packings exist)
                     let bPpb = parseInt(p.uom || p.pieces_per_box) || 1;
+                    if (bPpb <= 1 && p.item_name) {
+                        let match = p.item_name.match(/1[xX](\d+)/);
+                        if (match && parseInt(match[1]) > 0) {
+                            bPpb = parseInt(match[1]);
+                        }
+                    }
                     let bName = p.uom_name || (p.unit ? p.unit.name : 'Pcs');
                     if (!bName || bName.toLowerCase() === 'piece' || bName.toLowerCase() === 'pcs') {
                         bName = '1x' + bPpb;
@@ -1713,7 +1752,7 @@
             if ($whSelect.length) {
                 const isSoMode = "{{ request()->query('mode') }}" === "so";
                 let whParams = {};
-                if (!isSoMode) whParams.include_empty = 1;
+                if (isSoMode) whParams.include_empty = 1;
 
                 $.getJSON('/product/' + p.id + '/warehouses', whParams, function(warehouses) {
                     $whSelect.html('<option value="">-- Select --</option>');
@@ -1723,8 +1762,8 @@
                             var displayStock = pw.stock_display || stock;
                             $whSelect.append(`<option value="${pw.id}" data-stock="${stock}" data-stock-display="${displayStock}" data-ppb="${pw.ppb || 1}" data-size-mode="${pw.size_mode || 'std'}">${pw.name} (Stock: ${displayStock})</option>`);
                         });
-                        // Default to main store (ID 1) if available
-                        const defaultWh = warehouses.find(w => w.id == 1) || warehouses[0];
+                        const hWh = $('#warehouse_id_header').val() || '{{ $defaultWhId }}';
+                        const defaultWh = warehouses.find(w => w.id == hWh) || warehouses[0];
                         $whSelect.val(defaultWh.id).trigger('change');
                     }
                 });
@@ -1781,10 +1820,12 @@
             const gstAmt   = subTotal * (gstRate / 100);   // GST: ADDED
             $row.find('.gst-amount-row').val(gstAmt.toFixed(2));
 
-            const incTaxPct = num($row.find('.inc-tax').val());
-            const advTaxPct = num($row.find('.adv-tax').val());
+            const incTaxPct  = num($row.find('.inc-tax').val());
+            const advTaxVal  = num($row.find('.adv-tax').val());
+            const advTaxType = $row.find('.adv-tax-type').val() || 'percent';
+
             const incTaxAmt = subTotal * (incTaxPct / 100); // WHT: DEDUCTED
-            const advTaxAmt = subTotal * (advTaxPct / 100); // Adv: DEDUCTED
+            const advTaxAmt = (advTaxType === 'percent') ? (subTotal * (advTaxVal / 100)) : advTaxVal; // Adv: ADDED
             // Line net: sub + GST - WHT + Adv
             const netTotal  = subTotal + gstAmt - incTaxAmt + advTaxAmt;
 
@@ -1824,10 +1865,13 @@
                 let rowDisc   = (discType === 'percent') ? (rowGross * discVal / 100) : discVal;
                 
                 let rowGst    = num($r.find('.gst-amount-row').val());
-                // WHT and Adv stored as % — compute rupee amounts
                 let rowSub    = num($r.find('.row-sub-total').val());
                 let rowIncTax = rowSub * (num($r.find('.inc-tax').val()) / 100);
-                let rowAdvTax = rowSub * (num($r.find('.adv-tax').val()) / 100);
+
+                let rowAdvTaxVal  = num($r.find('.adv-tax').val());
+                let rowAdvTaxType = $r.find('.adv-tax-type').val() || 'percent';
+                let rowAdvTax     = (rowAdvTaxType === 'percent') ? (rowSub * (rowAdvTaxVal / 100)) : rowAdvTaxVal;
+
                 let sub       = num($r.find('.row-sub-total').val());
 
                 gross          += rowGross;
@@ -1935,7 +1979,7 @@
             if (!productId) return;
 
             let params = { warehouse_id: warehouseId };
-            if (!isSoMode) params.include_empty = 1;
+            if (isSoMode) params.include_empty = 1;
 
             $.get("{{ route('batches.for.product', ':id') }}".replace(':id', productId), params, function(batches) {
                 batches.forEach(function(batch) {
@@ -1972,7 +2016,7 @@
               <tr class="item-row">
                 <td>
                     <input type="hidden" name="product_id[]" class="item-id">
-                    <input type="hidden" name="warehouse_id[]" class="item-warehouse row-warehouse-id" value="1">
+                    <input type="hidden" name="warehouse_id[]" class="item-warehouse row-warehouse-id" value="{{ $defaultWhId }}">
                     <input type="text" name="item_code[]" class="form-control bg-transparent border-0 px-0 item-code" readonly>
                 </td>
                 <td style="font-weight:600; color:#334155;">
@@ -2013,7 +2057,13 @@
                     <input type="hidden" name="gst_amount[]" class="gst-amount-row" value="0">
                 </td>
                 <td><input type="number" step="0.01" name="inc_tax[]" class="form-control inc-tax text-end row-input" value="0"></td>
-                <td><input type="number" step="0.01" name="adv_tax[]" class="form-control adv-tax text-end row-input" value="0"></td>
+                <td>
+                    <div class="input-group input-group-sm" style="min-width: 90px;">
+                        <input type="hidden" name="adv_tax_type[]" class="adv-tax-type" value="percent">
+                        <input type="number" step="0.01" name="adv_tax[]" class="form-control adv-tax text-end row-input" value="0">
+                        <button class="btn btn-outline-info toggle-adv-tax-type" type="button" data-type="percent" style="padding: 2px 5px; font-size: 0.72rem;">%</button>
+                    </div>
+                </td>
                 <td><input type="text" name="total[]" class="form-control row-net-total input-highlight text-end" readonly></td>
                 ${batchHtml}
                 <td><input type="text" name="cost_per_pc[]" class="form-control row-cost-pc text-end" readonly></td>
@@ -2163,7 +2213,7 @@
                 
                 const isSoMode = "{{ request()->query('mode') }}" === "so";
                 let whParams = {};
-                if (!isSoMode) whParams.include_empty = 1;
+                if (isSoMode) whParams.include_empty = 1;
 
                 $.getJSON('/product/' + data.id + '/warehouses', whParams, function(warehouses) {
                     $whSelect.html('<option value="">-- Select --</option>');
@@ -2178,8 +2228,8 @@
                             );
                         });
                         if (warehouses.length > 0) {
-                            // Default to warehouse_id 1 (Main Store) if it exists, otherwise first one
-                            var defaultWh = warehouses.find(w => w.id == 1) || warehouses[0];
+                            var hWh = $('#warehouse_id_header').val() || '{{ $defaultWhId }}';
+                            var defaultWh = warehouses.find(w => w.id == hWh) || warehouses[0];
                             $whSelect.val(defaultWh.id).trigger('change');
                         }
                     }
@@ -2277,7 +2327,13 @@
             var $row = $(this).closest('tr');
             var $opt = $(this).find('option:selected');
             
-            var factor = parseFloat($opt.data('ppb')) || 1;
+            var factor = parseFloat($opt.attr('data-ppb') || $opt.data('ppb')) || 1;
+            if (factor <= 1) {
+                var optText = $opt.text();
+                if (optText && optText.match(/1[xX](\d+)/)) {
+                    factor = parseInt(optText.match(/1[xX](\d+)/)[1]);
+                }
+            }
             var price  = $opt.data('price');
             var pkgId  = $(this).val();
 
