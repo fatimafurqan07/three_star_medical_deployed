@@ -73,8 +73,6 @@
             </div>
         </div>
     </div>
-    </div>
-    </div>
 
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -87,14 +85,14 @@
                         @csrf
                         <input type="hidden" name="edit_id" id="id" />
                         <div class="mb-3">
-                            <label for="title" class="form-label">Title</label>
-                            <input type="text" name="name" class="form-control" id="name" />
+                            <label for="name" class="form-label">Title</label>
+                            <input type="text" name="name" class="form-control" id="name" required />
                         </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close
                     </button>
-                    @canany(['categories.add', 'categories.edit'])
+                    @canany(['categories.create', 'categories.edit'])
                         <input type="submit" class="btn btn-primary save-btn">
                     @endcanany
                 </div>
@@ -126,16 +124,21 @@
             $(this).find(':submit').attr('disabled', true);
             myAjax(url, formdata, method);
         });
+
+        $(document).on('click', '#reset', function() {
+            $('#id').val('');
+            $('#name').val('');
+            $('#exampleModalLabel').text('Add category');
+        });
+
         $(document).on('click', '.edit-btn', function() {
-
             var tr = $(this).closest("tr");
-            var id = tr.find(".id").text();
-            var name = tr.find(".name").text();
-            $('#id').val(id); // Set the ID in the hidden input field
-            $('#name').val(name)
-            $("#exampleModal").modal("show")
-
-
+            var id = tr.find(".id").text().trim();
+            var name = tr.find(".name").text().trim();
+            $('#id').val(id);
+            $('#name').val(name);
+            $('#exampleModalLabel').text('Edit category');
+            $("#exampleModal").modal("show");
         });
     </script>
     <script>

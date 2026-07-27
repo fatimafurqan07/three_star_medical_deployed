@@ -25,13 +25,18 @@ class CategoryController extends Controller
         'name' => 'required|unique:categories,name,' . $request->edit_id . ',id',
     ]);
 
-     if ($validator->fails()) {
-
-    return redirect()->back()
-        ->withErrors($validator)
-        ->withInput()
-        ->with('catagory_swal_error', $validator->errors()->first());
-}
+    if ($validator->fails()) {
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+        return redirect()->back()
+            ->withErrors($validator)
+            ->withInput()
+            ->with('catagory_swal_error', $validator->errors()->first());
+    }
 
     /**
      * UPDATE CATEGORY
@@ -40,6 +45,14 @@ class CategoryController extends Controller
         $category = Category::findOrFail($request->edit_id);
         $category->name = $request->name;
         $category->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Category Updated Successfully',
+                'category' => $category
+            ]);
+        }
 
         return response()->json([
             'success' => 'Category Updated Successfully',
@@ -53,6 +66,14 @@ class CategoryController extends Controller
     $category = new Category();
     $category->name = $request->name;
     $category->save();
+
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Category Created Successfully',
+            'category' => $category
+        ]);
+    }
 
     /**
      * IF REQUEST FROM PRODUCT PAGE

@@ -27,6 +27,12 @@ public function store(Request $request)
     ]);
 
    if ($validator->fails()) {
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $validator->errors()->first()
+        ], 422);
+    }
 
     return redirect()->back()
         ->withErrors($validator)
@@ -58,6 +64,14 @@ public function store(Request $request)
     $subcategory->name = $request->name;
     $subcategory->category_id = $request->category_id;
     $subcategory->save();
+
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'status' => 'success',
+            'message' => $message,
+            'subcategory' => $subcategory
+        ]);
+    }
 
     // RESPONSE FOR ALERT
     if ($request->page === 'product_page') {

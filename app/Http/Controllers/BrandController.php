@@ -24,6 +24,12 @@ class BrandController extends Controller
     ]);
 
   if ($validator->fails()) {
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $validator->errors()->first()
+        ], 422);
+    }
 
     return redirect()->back()
         ->withErrors($validator)
@@ -55,16 +61,19 @@ class BrandController extends Controller
     $brand->name = $request->name;
     $brand->save();
 
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'status' => 'success',
+            'message' => $message,
+            'brand' => $brand
+        ]);
+    }
+
     // PRODUCT PAGE RESPONSE
     if ($request->page === 'product_page') {
         
         $msg = 'Brand Created Successfully';
          return redirect()->back()->with('success',$msg);
-        //response()->json([
-        //     'status' => 'success',
-        //     'message' => $message,
-        //     'redirect' => route('store')
-        // ]);
     }
 
     // NORMAL RESPONSE

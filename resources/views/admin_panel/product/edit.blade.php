@@ -412,7 +412,7 @@
                                 <div class="col-md-4">
                                     <label class="form-label-pro">Brand <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <select class="form-select form-control-pro form-select-pro" name="brand_id" required>
+                                        <select class="form-select form-control-pro form-select-pro" id="brand-dropdown" name="brand_id" required>
                                             <option value="">Select...</option>
                                             @foreach ($brands as $brand) 
                                                 <option value="{{ $brand->id }}" {{ $product->brand_id == $brand->id ? 'selected' : '' }}>{{ $brand->name }}</option> 
@@ -547,60 +547,7 @@
         </form>
 
         {{-- Modals --}}
-        {{-- Modals --}}
-        <div id="categoryModal" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-sm">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-md);">
-                    <form action="{{ route('store.category') }}" method="POST">
-                        @csrf
-                        <div class="modal-header border-0 pb-0">
-                            <h6 class="modal-title fw-bold">New Category</h6>
-                            <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <input type="hidden" name="page" value="product_page">
-                            <div class="mb-3">
-                                <label class="form-label-pro">Category Name</label>
-                                <input type="text" name="name" class="form-control-pro" required
-                                    placeholder="e.g. Ceramics">
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 rounded-pill">Create Category</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div id="subcategoryModal" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-sm">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-md);">
-                    <form action="{{ route('store.subcategory') }}" method="POST">
-                        @csrf
-                        <div class="modal-header border-0 pb-0">
-                            <h6 class="modal-title fw-bold">New Subcategory</h6>
-                            <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <input type="hidden" name="page" value="product_page">
-                            <div class="mb-3">
-                                <label class="form-label-pro">Parent Category</label>
-                                <select name="category_id" class="form-select form-control-pro">
-                                    @foreach ($categories as $c)
-                                        <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label-pro">Name</label>
-                                <input type="text" name="name" class="form-control-pro" required
-                                    placeholder="e.g. Floor Tiles">
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 rounded-pill">Create Subcategory</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        @include('admin_panel.product.partials.modals')
 
     </div>
 @endsection
@@ -779,6 +726,164 @@
             $('#non_fridge').on('change', function() { if($(this).prop('checked')) $('#fridge').prop('checked', false); });
             $('#fast_moving').on('change', function() { if($(this).prop('checked')) $('#slow_moving').prop('checked', false); });
             $('#slow_moving').on('change', function() { if($(this).prop('checked')) $('#fast_moving').prop('checked', false); });
+
+            // --- HELPER TO CLOSE MODALS CLEANLY ---
+            function closeModalClean(modalId) {
+                var modalEl = document.getElementById(modalId);
+                if (modalEl) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                        var modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        modalInstance.hide();
+                    }
+                    $(modalEl).modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '');
+                }
+            }
+
+            // --- PRE-SELECT PARENT CATEGORY WHEN OPENING SUBCATEGORY MODAL ---
+            $('#subcategoryModal').on('show.bs.modal', function() {
+                var selectedCat = $('#category-dropdown').val();
+                if (selectedCat) {
+                    $(this).find('select[name="category_id"]').val(selectedCat);
+                }
+            });
+
+            // --- AJAX MODAL SUBMISSIONS FOR CATEGORY, SUBCATEGORY, AND BRAND ---
+            $(document).on('submit', '#ajaxCategoryForm', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $btn = $form.find(':submit');
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: 'POST',
+                    data: $form.serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(res) {
+                        if ((res.status === 'success' || res.category) && res.category) {
+                            var cat = res.category;
+                            var $catDropdown = $('#category-dropdown');
+                            if ($catDropdown.find(`option[value="${cat.id}"]`).length === 0) {
+                                $catDropdown.append(new Option(cat.name, cat.id, true, true));
+                            } else {
+                                $catDropdown.val(cat.id);
+                            }
+                            $catDropdown.val(cat.id).trigger('change');
+
+                            var $subModalCat = $('#subcategoryModal select[name="category_id"]');
+                            if ($subModalCat.find(`option[value="${cat.id}"]`).length === 0) {
+                                $subModalCat.append(new Option(cat.name, cat.id, false, false));
+                            }
+
+                            closeModalClean('categoryModal');
+                            $form[0].reset();
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Category Created Successfully', timer: 1500, showConfirmButton: false });
+                            }
+                        } else {
+                            alert(res.message || res.error || 'Error creating category');
+                        }
+                    },
+                    error: function(xhr) {
+                        var msg = xhr.responseJSON ? (xhr.responseJSON.message || xhr.responseJSON.error) : 'Error creating category';
+                        alert(msg);
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
+
+            $(document).on('submit', '#ajaxSubcategoryForm', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $btn = $form.find(':submit');
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: 'POST',
+                    data: $form.serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(res) {
+                        if ((res.status === 'success' || res.subcategory) && res.subcategory) {
+                            var sub = res.subcategory;
+                            var parentCatId = sub.category_id;
+
+                            // 1. Set main category dropdown to parent category
+                            $('#category-dropdown').val(parentCatId);
+
+                            // 2. Fetch updated subcategories for parentCatId directly and select the new subcategory
+                            $.get("{{ url('get-subcategories') }}/" + parentCatId, function(data) {
+                                let html = '<option value="">Select...</option>';
+                                data.forEach(s => {
+                                    var isSel = (s.id == sub.id) ? 'selected' : '';
+                                    html += `<option value="${s.id}" ${isSel}>${s.name}</option>`;
+                                });
+                                $('#subcategory-dropdown').html(html).val(sub.id).trigger('change');
+                            });
+
+                            closeModalClean('subcategoryModal');
+                            $form[0].reset();
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Subcategory Created Successfully', timer: 1500, showConfirmButton: false });
+                            }
+                        } else {
+                            alert(res.message || res.error || 'Error creating subcategory');
+                        }
+                    },
+                    error: function(xhr) {
+                        var msg = xhr.responseJSON ? (xhr.responseJSON.message || xhr.responseJSON.error) : 'Error creating subcategory';
+                        alert(msg);
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
+
+            $(document).on('submit', '#ajaxBrandForm', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $btn = $form.find(':submit');
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: 'POST',
+                    data: $form.serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(res) {
+                        if ((res.status === 'success' || res.brand) && res.brand) {
+                            var brand = res.brand;
+                            var $brandDropdown = $('#brand-dropdown');
+                            if ($brandDropdown.find(`option[value="${brand.id}"]`).length === 0) {
+                                $brandDropdown.append(new Option(brand.name, brand.id, true, true));
+                            } else {
+                                $brandDropdown.val(brand.id);
+                            }
+                            $brandDropdown.val(brand.id).trigger('change');
+
+                            closeModalClean('brandModal');
+                            $form[0].reset();
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Company Created Successfully', timer: 1500, showConfirmButton: false });
+                            }
+                        } else {
+                            alert(res.message || res.error || 'Error creating company');
+                        }
+                    },
+                    error: function(xhr) {
+                        var msg = xhr.responseJSON ? (xhr.responseJSON.message || xhr.responseJSON.error) : 'Error creating company';
+                        alert(msg);
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
 
             // Initialize existing rows' modes
             $packingTableBody.find('.ratio-input').each(function() {
