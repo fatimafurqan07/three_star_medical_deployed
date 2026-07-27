@@ -593,13 +593,20 @@
             // --- SELECT2 & AJAX ---
             $('.form-select-pro').select2({ width: '100%', dropdownParent: $('.page-container') });
             
-            $('#category-dropdown').on('change', function() {
+            $('#category-dropdown').on('change', function(e, autoSelectSubcategoryId) {
                 const cid = $(this).val();
-                if (!cid) return $('#subcategory-dropdown').html('<option value="">Select...</option>');
+                if (!cid) return $('#subcategory-dropdown').html('<option value="">Select...</option>').trigger('change');
                 $.get("{{ url('get-subcategories') }}/" + cid, function(res) {
                     let html = '<option value="">Select...</option>';
-                    res.forEach(s => html += `<option value="${s.id}">${s.name}</option>`);
-                    $('#subcategory-dropdown').html(html).trigger('change');
+                    res.forEach(s => {
+                        var isSel = (autoSelectSubcategoryId && s.id == autoSelectSubcategoryId) ? 'selected' : '';
+                        html += `<option value="${s.id}" ${isSel}>${s.name}</option>`;
+                    });
+                    $('#subcategory-dropdown').html(html);
+                    if (autoSelectSubcategoryId) {
+                        $('#subcategory-dropdown').val(autoSelectSubcategoryId);
+                    }
+                    $('#subcategory-dropdown').trigger('change');
                 });
             });
 
@@ -812,18 +819,8 @@
                             var sub = res.subcategory;
                             var parentCatId = sub.category_id;
 
-                            // 1. Set main category dropdown to parent category
-                            $('#category-dropdown').val(parentCatId);
-
-                            // 2. Fetch updated subcategories for parentCatId directly and select the new subcategory
-                            $.get("{{ url('get-subcategories') }}/" + parentCatId, function(data) {
-                                let html = '<option value="">Select...</option>';
-                                data.forEach(s => {
-                                    var isSel = (s.id == sub.id) ? 'selected' : '';
-                                    html += `<option value="${s.id}" ${isSel}>${s.name}</option>`;
-                                });
-                                $('#subcategory-dropdown').html(html).val(sub.id).trigger('change');
-                            });
+                            // Set main category dropdown to parent category AND trigger change with new sub.id
+                            $('#category-dropdown').val(parentCatId).trigger('change', [sub.id]);
 
                             closeModalClean('subcategoryModal');
                             $form[0].reset();

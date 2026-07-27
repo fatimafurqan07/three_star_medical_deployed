@@ -1,57 +1,115 @@
 function showAlert(title, text, icon) {
-    Swal.fire({
-        title: title,
-        html: text,
-        icon: icon,
-    });
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: title,
+            html: text,
+            icon: icon,
+        });
+    } else if (typeof swal !== 'undefined' && typeof swal === 'function') {
+        swal({
+            title: title,
+            text: text,
+            icon: icon,
+        });
+    } else {
+        alert(title + ": " + text);
+    }
 }
 
 
 function logoutAndDeleteFunction(e) {
-    var msg = e.getAttribute("data-msg");
-    var method = e.getAttribute("data-method");
+    var msg = e.getAttribute("data-msg") || "Are you sure you want to delete this?";
+    var method = e.getAttribute("data-method") || "GET";
     var url = e.getAttribute("data-url");
 
-    swal.fire({
-        title: "Are you sure?",
-        text: msg,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: 'continue',
-        cancelButtonText: 'cancel',
-        dangerMode: true,
-    })
-    .then((result) => {
-        if (result.isConfirmed) {
-            yourFunction(url,method);
-        } else {
-            swal("Your account is safe!");
-        }
-    });
+    var swalObj = typeof Swal !== 'undefined' ? Swal : (typeof swal !== 'undefined' && swal.fire ? swal : null);
 
-}
-function yourFunction(url,method) {
-        $.ajax({
-            url: url,
-            type: method,
-            headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                     },
-            success: function(response) {
-                if (response['reload'] != undefined) {
-                    showAlert("Success", response.success, "success");
-                    window.location.reload();
-                }
-                if (response['redirect'] != undefined) {
-                    showAlert("Success", response.success, "success");
-                    window.location.href = response['redirect'];
-                }
-            },
-            error: function(xhr, status, error) {
-                // Handle errors
+    if (swalObj && typeof swalObj.fire === 'function') {
+        swalObj.fire({
+            title: "Are you sure?",
+            text: msg,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+        })
+        .then((result) => {
+            if (result.isConfirmed) {
+                yourFunction(url, method);
             }
         });
+    } else {
+        if (confirm(msg)) {
+            yourFunction(url, method);
+        }
     }
+}
+
+function yourFunction(url, method) {
+    $.ajax({
+        url: url,
+        type: method,
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response && response.error !== undefined) {
+                var text = "<span style='color:red'>" + response.error + "</span>";
+                showAlert('Error', text, 'error');
+                return false;
+            }
+            if (response && response.reload !== undefined) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: "Success",
+                        text: response.success || "Operation completed successfully",
+                        icon: "success",
+                        timer: 1200,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                    setTimeout(() => { window.location.reload(); }, 1250);
+                } else {
+                    alert(response.success || "Operation completed successfully");
+                    window.location.reload();
+                }
+                return false;
+            }
+            if (response && response.redirect !== undefined) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: "Success",
+                        text: response.success || "Operation completed successfully",
+                        icon: "success",
+                        timer: 1200,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = response.redirect;
+                    });
+                    setTimeout(() => { window.location.href = response.redirect; }, 1250);
+                } else {
+                    alert(response.success || "Operation completed successfully");
+                    window.location.href = response.redirect;
+                }
+                return false;
+            }
+            if (response && response.success !== undefined) {
+                showAlert("Success", response.success, "success");
+            }
+        },
+        error: function(xhr, status, error) {
+            if (typeof ajaxErrorHandling === 'function') {
+                ajaxErrorHandling(xhr, error);
+            } else {
+                var msg = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)) ? (xhr.responseJSON.message || xhr.responseJSON.error) : (error || "Something went wrong!");
+                showAlert("Error", msg, "error");
+            }
+        }
+    });
+}
 
     function multipleerrorshandle(errors) {
         let message = '<ul style="text-align: left; list-style-type: none; padding-left: 0;">';

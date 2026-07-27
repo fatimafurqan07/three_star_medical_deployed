@@ -95,18 +95,28 @@ class CategoryController extends Controller
 
     public function delete($id)
     {
+        try {
+            $company = Category::find($id);
+            if (!$company) {
+                return response()->json(['error' => 'Category Not Found']);
+            }
 
-        $company = Category::find($id);
-        if ($company) {
+            if ($company->subcategory()->exists()) {
+                return response()->json(['error' => 'Cannot delete category because it has associated subcategories.']);
+            }
+
+            if (\App\Models\Product::where('category_id', $id)->exists()) {
+                return response()->json(['error' => 'Cannot delete category because it has associated products.']);
+            }
+
             $company->delete();
-            $msg = [
+            return response()->json([
                 'success' => 'Category Deleted Successfully',
-                'reload' =>  route('Category.home'),
-            ];
-        } else {
-            $msg = ['error' => 'Category Not Found'];
+                'reload'  => route('Category.home'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to delete category: ' . $e->getMessage()]);
         }
-        return response()->json($msg);
     }
    
      

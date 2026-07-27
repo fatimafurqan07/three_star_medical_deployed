@@ -6,7 +6,7 @@
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h6 class="modal-title fw-bold">New Category</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="page" value="product_page">
@@ -29,7 +29,7 @@
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h6 class="modal-title fw-bold">New Subcategory</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="page" value="product_page">
@@ -60,7 +60,7 @@
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h6 class="modal-title fw-bold">New Company / Brand</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="page" value="product_page">
